@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Book, Home, Laptop, Camera, Bicycle, Music, ShoppingBag, Utensils, Gift } from 'lucide-react';
+import { Book, Home, Laptop, Camera, Bike, Music, ShoppingBag, Utensils, Gift } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/ui/HeroSection';
@@ -13,7 +12,7 @@ const categories = [
   { title: 'Housing', icon: <Home size={24} />, slug: 'housing', count: 85 },
   { title: 'Electronics', icon: <Laptop size={24} />, slug: 'electronics', count: 196 },
   { title: 'Photography', icon: <Camera size={24} />, slug: 'photography', count: 42 },
-  { title: 'Sports', icon: <Bicycle size={24} />, slug: 'sports', count: 78 },
+  { title: 'Sports', icon: <Bike size={24} />, slug: 'sports', count: 78 },
   { title: 'Music', icon: <Music size={24} />, slug: 'music', count: 64 },
   { title: 'Clothing', icon: <ShoppingBag size={24} />, slug: 'clothing', count: 127 },
   { title: 'Food', icon: <Utensils size={24} />, slug: 'food', count: 93 },
