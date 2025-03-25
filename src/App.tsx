@@ -1,10 +1,14 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import Onboarding from "./pages/Onboarding";
+import Feed from "./pages/Feed";
+import Dashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -17,18 +21,28 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/categories" element={<NotFound />} />
-          <Route path="/category/:slug" element={<NotFound />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/feed" element={<Feed />} />
+          <Route path="/profile" element={<NotFound />} />
+          <Route path="/profile/:id" element={<NotFound />} />
+          <Route path="/messages" element={<NotFound />} />
+          <Route path="/message/:id" element={<NotFound />} />
+          <Route path="/marketplace" element={<NotFound />} />
+          <Route path="/marketplace/:id" element={<NotFound />} />
           <Route path="/events" element={<NotFound />} />
-          <Route path="/sell" element={<NotFound />} />
-          <Route path="/item/:id" element={<NotFound />} />
-          <Route path="/login" element={<NotFound />} />
+          <Route path="/events/:id" element={<NotFound />} />
+          <Route path="/settings" element={<NotFound />} />
+          <Route path="/notifications" element={<NotFound />} />
+          <Route path="/admin/dashboard" element={<Dashboard />} />
+          <Route path="/admin/users" element={<NotFound />} />
+          <Route path="/admin/posts" element={<NotFound />} />
+          <Route path="/admin/events" element={<NotFound />} />
+          <Route path="/admin/marketplace" element={<NotFound />} />
+          <Route path="/admin/settings" element={<NotFound />} />
           <Route path="/featured" element={<NotFound />} />
           <Route path="/wishlist" element={<NotFound />} />
-          <Route path="/notifications" element={<NotFound />} />
-          <Route path="/profile" element={<NotFound />} />
-          <Route path="/message/:id" element={<NotFound />} />
-          <Route path="/settings" element={<NotFound />} />
           <Route path="/about" element={<NotFound />} />
           <Route path="/contact" element={<NotFound />} />
           <Route path="/faq" element={<NotFound />} />
