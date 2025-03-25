@@ -46,7 +46,7 @@ const PostsList = ({ searchQuery }: PostsListProps) => {
     setPosts([
       {
         id: '1',
-        content: 'Just aced my final exam! So happy to be done with this semester. Who's up for celebrating tonight? 🎉',
+        content: "Just aced my final exam! So happy to be done with this semester. Who\u2019s up for celebrating tonight? 🎉",
         user: {
           id: '101',
           name: 'Sarah Johnson',
