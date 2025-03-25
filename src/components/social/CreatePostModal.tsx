@@ -42,7 +42,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }: CreatePostModalProps) =>
   };
   
   // For demo purposes, let's simulate image upload by allowing URLs
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = () => {
     // In a real app, this would be an actual file upload
     // For now, we'll just prompt the user for an image URL
     const imageUrl = prompt('Enter an image URL:');

@@ -134,7 +134,7 @@ const UsersList = ({ searchQuery }: UsersListProps) => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'moderator' ? 'warning' : 'secondary'}>
+                    <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'moderator' ? 'secondary' : 'default'}>
                       {user.role}
                     </Badge>
                   </TableCell>
