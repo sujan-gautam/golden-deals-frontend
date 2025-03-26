@@ -8,4 +8,10 @@ export interface Story {
   };
   image: string;
   createdAt: string;
+  content?: string;
+  views?: number;
+  duration?: number; // in seconds
+  expiresAt?: string;
+  location?: string;
+  isViewed?: boolean;
 }

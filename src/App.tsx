@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,7 @@ import SignUp from "./pages/SignUp";
 import Onboarding from "./pages/Onboarding";
 import Feed from "./pages/Feed";
 import Dashboard from "./pages/admin/Dashboard";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +29,7 @@ const App = () => (
           <Route path="/feed" element={<Feed />} />
           <Route path="/profile" element={<NotFound />} />
           <Route path="/profile/:id" element={<NotFound />} />
-          <Route path="/messages" element={<NotFound />} />
+          <Route path="/messages" element={<Messages />} />
           <Route path="/message/:id" element={<NotFound />} />
           <Route path="/marketplace" element={<NotFound />} />
           <Route path="/marketplace/:id" element={<NotFound />} />
