@@ -6,7 +6,9 @@ import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast";
 import { formatDistance } from 'date-fns';
+import MessageSellerModal from '../social/MessageSellerModal';
 
 interface MarketplaceCardProps {
   id: string;
@@ -35,6 +37,8 @@ const MarketplaceCard = ({
   stock = 'instock'
 }: MarketplaceCardProps) => {
   const [isLiked, setIsLiked] = useState(false);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const { toast } = useToast();
   
   const formatTimeAgo = (timestamp: string) => {
     try {
@@ -54,6 +58,15 @@ const MarketplaceCard = ({
     instock: "In Stock",
     lowstock: "Low Stock",
     soldout: "Sold Out"
+  };
+
+  const handlePurchase = () => {
+    if (stock === 'soldout') return;
+    
+    toast({
+      title: stock === 'lowstock' ? "Last items remaining!" : "Added to cart!",
+      description: `${title} has been added to your cart.`,
+    });
   };
   
   return (
@@ -92,7 +105,13 @@ const MarketplaceCard = ({
           </Link>
           
           <button 
-            onClick={() => setIsLiked(!isLiked)} 
+            onClick={() => {
+              setIsLiked(!isLiked);
+              toast({
+                title: isLiked ? "Removed from wishlist" : "Added to wishlist",
+                description: isLiked ? `${title} has been removed from your wishlist.` : `${title} has been added to your wishlist.`,
+              });
+            }} 
             className={`p-1 rounded-full transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
             aria-label={isLiked ? "Remove from wishlist" : "Add to wishlist"}
           >
@@ -124,15 +143,36 @@ const MarketplaceCard = ({
         </div>
         
         <div className="mt-3 flex gap-2">
-          <Button variant="default" size="sm" className="flex-1" disabled={stock === 'soldout'}>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="flex-1" 
+            disabled={stock === 'soldout'}
+            onClick={handlePurchase}
+          >
             <ShoppingBag className="h-4 w-4 mr-1" />
             {stock === 'soldout' ? 'Sold Out' : 'Purchase'}
           </Button>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsMessageModalOpen(true)}
+          >
             <MessageSquare className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      <MessageSellerModal 
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        seller={{
+          id: 'seller-id',
+          name: seller.name,
+          avatar: seller.avatar
+        }}
+        productName={title}
+      />
     </motion.div>
   );
 };

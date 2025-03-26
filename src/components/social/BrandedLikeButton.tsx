@@ -42,7 +42,7 @@ const BrandedLikeButton = ({ initialLikes = 0, isLiked = false, onLike }: Brande
               exit={{ scale: 0.5, opacity: 0 }}
               className="relative"
             >
-              {/* Star or gold seal icon */}
+              {/* Star icon for liked state */}
               <motion.svg 
                 className="h-5 w-5 fill-primary" 
                 viewBox="0 0 24 24"

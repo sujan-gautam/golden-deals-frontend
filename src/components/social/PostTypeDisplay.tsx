@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,10 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from 'react-router-dom';
+import { useToast } from "@/components/ui/use-toast";
 import BrandedLikeButton from './BrandedLikeButton';
+import CommentsSection from './CommentsSection';
+import MessageSellerModal from './MessageSellerModal';
 import { formatDistance } from 'date-fns';
 
 interface User {
@@ -60,6 +63,10 @@ interface PostTypeDisplayProps {
 }
 
 const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComment }) => {
+  const [showComments, setShowComments] = useState(false);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const { toast } = useToast();
+
   const formatTimeAgo = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -67,6 +74,37 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
     } catch (e) {
       return 'recently';
     }
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({
+      title: "Link copied",
+      description: "Post link has been copied to clipboard.",
+    });
+  };
+
+  const handlePurchase = (productPost: ProductPost) => {
+    if (productPost.status === 'soldout') {
+      toast({
+        title: "Product unavailable",
+        description: "This product is currently sold out.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Added to cart",
+      description: `${productPost.productName} has been added to your cart.`,
+    });
+  };
+
+  const handleAttendEvent = (eventPost: EventPost) => {
+    toast({
+      title: "Event saved",
+      description: `You're now attending "${eventPost.title}".`,
+    });
   };
 
   // Shared post header
@@ -99,12 +137,20 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         variant="ghost"
         size="sm"
         className="flex-1 text-gray-600"
-        onClick={onComment}
+        onClick={() => {
+          setShowComments(!showComments);
+          if (!showComments) onComment();
+        }}
       >
         <MessageCircle className="mr-2 h-5 w-5" />
         Comment
       </Button>
-      <Button variant="ghost" size="sm" className="flex-1 text-gray-600">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="flex-1 text-gray-600"
+        onClick={handleShare}
+      >
         <Share2 className="mr-2 h-5 w-5" />
         Share
       </Button>
@@ -141,6 +187,17 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         </CardContent>
         
         <PostFooter />
+        
+        {showComments && (
+          <div className="px-4 pb-4">
+            <CommentsSection 
+              postId={post.id}
+              initialComments={[
+                // We'll start with an empty comments section that users can fill
+              ]}
+            />
+          </div>
+        )}
       </Card>
     );
   }
@@ -148,11 +205,6 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
   // Product post display
   if (post.type === 'product') {
     const productPost = post as ProductPost;
-    const statusColor = {
-      instock: 'bg-green-100 text-green-800',
-      lowstock: 'bg-yellow-100 text-yellow-800',
-      soldout: 'bg-red-100 text-red-800'
-    };
     
     return (
       <Card className="mb-4 overflow-hidden">
@@ -208,17 +260,45 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           )}
           
           <div className="mt-4">
-            <Button variant="default" size="sm" className="mr-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="mr-2"
+              onClick={() => handlePurchase(productPost)}
+              disabled={productPost.status === 'soldout'}
+            >
               <ShoppingBag className="h-4 w-4 mr-2" />
               {productPost.status !== 'soldout' ? 'Purchase' : 'Join Waitlist'}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsMessageModalOpen(true)}
+            >
               Message Seller
             </Button>
           </div>
         </CardContent>
         
         <PostFooter />
+        
+        {showComments && (
+          <div className="px-4 pb-4">
+            <CommentsSection 
+              postId={post.id}
+              initialComments={[
+                // We'll start with an empty comments section that users can fill
+              ]}
+            />
+          </div>
+        )}
+        
+        <MessageSellerModal 
+          isOpen={isMessageModalOpen}
+          onClose={() => setIsMessageModalOpen(false)}
+          seller={post.user}
+          productName={productPost.productName}
+        />
       </Card>
     );
   }
@@ -275,7 +355,12 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           )}
           
           <div className="mt-4">
-            <Button variant="default" size="sm" className="mr-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="mr-2"
+              onClick={() => handleAttendEvent(eventPost)}
+            >
               <Calendar className="h-4 w-4 mr-2" />
               Attend Event
             </Button>
@@ -286,6 +371,17 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         </CardContent>
         
         <PostFooter />
+        
+        {showComments && (
+          <div className="px-4 pb-4">
+            <CommentsSection 
+              postId={post.id}
+              initialComments={[
+                // We'll start with an empty comments section that users can fill
+              ]}
+            />
+          </div>
+        )}
       </Card>
     );
   }
