@@ -1,7 +1,12 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageSquare, DollarSign } from 'lucide-react';
+import { Heart, MessageSquare, DollarSign, ShoppingBag, Tag } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatDistance } from 'date-fns';
 
 interface MarketplaceCardProps {
   id: string;
@@ -15,6 +20,7 @@ interface MarketplaceCardProps {
   };
   timestamp: string;
   category: string;
+  stock?: 'instock' | 'lowstock' | 'soldout';
 }
 
 const MarketplaceCard = ({
@@ -25,31 +31,62 @@ const MarketplaceCard = ({
   image,
   seller,
   timestamp,
-  category
+  category,
+  stock = 'instock'
 }: MarketplaceCardProps) => {
   const [isLiked, setIsLiked] = useState(false);
   
+  const formatTimeAgo = (timestamp: string) => {
+    try {
+      return formatDistance(new Date(timestamp), new Date(), { addSuffix: true });
+    } catch (e) {
+      return 'recently';
+    }
+  };
+  
+  const stockColor = {
+    instock: "bg-green-100 text-green-800 border-green-200",
+    lowstock: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    soldout: "bg-red-100 text-red-800 border-red-200"
+  };
+  
+  const stockText = {
+    instock: "In Stock",
+    lowstock: "Low Stock",
+    soldout: "Sold Out"
+  };
+  
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border border-gray-100">
-      <Link to={`/item/${id}`}>
+    <motion.div 
+      className="bg-white rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg border border-gray-100"
+      whileHover={{ y: -5 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <Link to={`/marketplace/${id}`}>
         <div className="relative h-48 overflow-hidden">
           <img 
             src={image} 
             alt={title} 
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           />
-          <div className="absolute top-2 right-2">
-            <span className="bg-black/70 text-white text-xs font-medium px-2 py-1 rounded-full">
+          <div className="absolute top-2 right-2 flex gap-2">
+            <Badge className="capitalize">
               {category}
-            </span>
+            </Badge>
+            <Badge 
+              variant={stock === 'instock' ? 'secondary' : stock === 'lowstock' ? 'default' : 'destructive'}
+            >
+              {stockText[stock]}
+            </Badge>
           </div>
         </div>
       </Link>
       
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <Link to={`/item/${id}`} className="block">
-            <h3 className="font-semibold text-gray-800 hover:text-usm-gold transition-colors line-clamp-1">
+          <Link to={`/marketplace/${id}`} className="block">
+            <h3 className="font-semibold text-gray-800 hover:text-primary transition-colors line-clamp-1">
               {title}
             </h3>
           </Link>
@@ -64,7 +101,7 @@ const MarketplaceCard = ({
         </div>
         
         <div className="flex items-center mb-2">
-          <DollarSign className="h-4 w-4 text-usm-gold mr-1" />
+          <DollarSign className="h-4 w-4 text-primary mr-1" />
           <span className="font-bold text-gray-900">${price.toFixed(2)}</span>
         </div>
         
@@ -72,29 +109,31 @@ const MarketplaceCard = ({
           {description}
         </p>
         
-        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <div className="flex items-center">
-            <img 
-              src={seller.avatar} 
-              alt={seller.name} 
-              className="w-6 h-6 rounded-full object-cover mr-2"
-            />
+            <Avatar className="w-6 h-6 mr-2">
+              <AvatarImage src={seller.avatar} alt={seller.name} />
+              <AvatarFallback>{seller.name.charAt(0)}</AvatarFallback>
+            </Avatar>
             <span className="text-xs text-gray-600">{seller.name}</span>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-500">{timestamp}</span>
-            <Link 
-              to={`/message/${id}`} 
-              className="p-1 rounded-full text-gray-400 hover:text-usm-gold transition-colors"
-              aria-label="Message seller"
-            >
-              <MessageSquare className="h-4 w-4" />
-            </Link>
+          <div className="text-xs text-gray-500">
+            {formatTimeAgo(timestamp)}
           </div>
         </div>
+        
+        <div className="mt-3 flex gap-2">
+          <Button variant="default" size="sm" className="flex-1" disabled={stock === 'soldout'}>
+            <ShoppingBag className="h-4 w-4 mr-1" />
+            {stock === 'soldout' ? 'Sold Out' : 'Purchase'}
+          </Button>
+          <Button variant="outline" size="sm">
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
