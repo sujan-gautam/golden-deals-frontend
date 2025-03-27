@@ -1,20 +1,16 @@
 
 import { Types } from 'mongoose';
 
-export interface Story {
+export interface Comment {
   _id?: string | Types.ObjectId;
+  postId: string;
   userId: string;
   user: {
     _id: string;
     name: string;
     avatar: string;
   };
-  image: string;
-  content?: string;
+  content: string;
   createdAt: string;
-  views?: number;
-  duration?: number; // in seconds
-  expiresAt?: string;
-  location?: string;
-  isViewed?: boolean;
+  likes: string[]; // array of user IDs who liked the comment
 }

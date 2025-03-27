@@ -1,6 +1,8 @@
 
+import { Types } from 'mongoose';
+
 export interface Message {
-  id: string;
+  _id?: string | Types.ObjectId;
   senderId: string;
   receiverId: string;
   content: string;
@@ -9,9 +11,9 @@ export interface Message {
 }
 
 export interface Conversation {
-  id: string;
+  _id?: string | Types.ObjectId;
   participants: {
-    id: string;
+    _id: string;
     name: string;
     avatar: string;
   }[];

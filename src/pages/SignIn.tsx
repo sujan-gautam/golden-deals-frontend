@@ -1,65 +1,20 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const { login, loading, error } = useAuth();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      // For now, we'll just simulate authentication
-      // In a real app, this would connect to your backend
-      if (email === 'admin@example.com' && password === 'password') {
-        // Admin login
-        localStorage.setItem('user', JSON.stringify({ 
-          id: '1', 
-          email, 
-          name: 'Admin User',
-          role: 'admin',
-          avatar: 'https://i.pravatar.cc/300?img=68'
-        }));
-        toast({
-          title: "Welcome back, Admin!",
-          description: "You've successfully signed in.",
-        });
-        navigate('/admin/dashboard');
-      } else if (email && password) {
-        // Regular user login - in a real app, this would verify credentials
-        localStorage.setItem('user', JSON.stringify({
-          id: '2',
-          email,
-          name: email.split('@')[0],
-          role: 'user',
-          avatar: 'https://i.pravatar.cc/300?img=32'
-        }));
-        toast({
-          title: "Welcome back!",
-          description: "You've successfully signed in.",
-        });
-        navigate('/feed');
-      } else {
-        setError('Invalid email or password');
-      }
-    } catch (err) {
-      setError('An error occurred during sign in');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    await login(email, password);
   };
 
   return (
@@ -121,8 +76,8 @@ const SignIn = () => {
                   />
                 </div>
               </div>
-              <Button className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+              <Button className="w-full" disabled={loading}>
+                {loading ? "Signing in..." : "Sign In"}
               </Button>
             </div>
           </form>

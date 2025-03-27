@@ -1,55 +1,30 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const SignUp = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [passwordError, setPasswordError] = useState('');
+  const { register, loading, error } = useAuth();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    setPasswordError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
+      setPasswordError('Passwords do not match');
       return;
     }
 
-    try {
-      // For now, we'll just simulate registration
-      // In a real app, this would connect to your backend
-      localStorage.setItem('user', JSON.stringify({
-        id: Math.random().toString(36).substr(2, 9),
-        email,
-        name,
-        role: 'user',
-        avatar: `https://i.pravatar.cc/300?img=${Math.floor(Math.random() * 70)}`
-      }));
-      
-      toast({
-        title: "Account created!",
-        description: "You've successfully signed up.",
-      });
-      navigate('/onboarding');
-    } catch (err) {
-      setError('An error occurred during sign up');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    await register(name, email, password);
   };
 
   return (
@@ -64,10 +39,10 @@ const SignUp = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
+          {(error || passwordError) && (
             <div className="bg-red-50 text-red-700 p-3 rounded-md flex items-center mb-4">
               <AlertCircle className="h-5 w-5 mr-2" />
-              <span>{error}</span>
+              <span>{error || passwordError}</span>
             </div>
           )}
           <form onSubmit={handleSignUp}>
@@ -140,8 +115,8 @@ const SignUp = () => {
                   />
                 </div>
               </div>
-              <Button className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Sign Up"}
+              <Button className="w-full" disabled={loading}>
+                {loading ? "Creating account..." : "Sign Up"}
               </Button>
             </div>
           </form>
