@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import {
@@ -12,29 +12,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Home, Search, MessageSquare, ShoppingBag, Calendar, LogOut, Settings, User, Menu, X } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 interface SocialLayoutProps {
   children: React.ReactNode;
 }
 
 const SocialLayout = ({ children }: SocialLayoutProps) => {
-  const [user, setUser] = useState<any>(null);
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      navigate('/signin');
-      return;
-    }
-    setUser(JSON.parse(userData));
-  }, [navigate]);
-
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/signin');
+    logout();
   };
 
   return (

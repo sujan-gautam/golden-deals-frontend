@@ -12,37 +12,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BarChart, Users, ShoppingBag, Calendar, Settings, Bell, LogOut, Menu, X, Home, Newspaper } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const [user, setUser] = useState<any>(null);
+  const { user, logout, isAuthenticated } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     // Check if user is logged in and is admin
-    const userData = localStorage.getItem('user');
-    if (!userData) {
+    if (!isAuthenticated) {
       navigate('/signin');
       return;
     }
     
-    const user = JSON.parse(userData);
-    if (user.role !== 'admin') {
+    if (user?.role !== 'admin') {
       navigate('/feed');
       return;
     }
-    
-    setUser(user);
-  }, [navigate]);
+  }, [navigate, user, isAuthenticated]);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/signin');
+    logout();
   };
 
   const isActive = (path: string) => {
