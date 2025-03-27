@@ -9,4 +9,7 @@ export interface User {
   avatar: string;
   role: 'user' | 'admin';
   createdAt: string;
+  bio?: string;
+  location?: string;
+  website?: string;
 }

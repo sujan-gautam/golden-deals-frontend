@@ -22,13 +22,15 @@ const StoriesSection = () => {
     const fetchStories = async () => {
       try {
         const data = await getStories();
-        setStories(data);
+        setStories(data || []);
       } catch (err: any) {
         toast({
           title: "Error",
           description: err.message || "Failed to load stories",
           variant: "destructive",
         });
+        // Set empty array on error to prevent crashes
+        setStories([]);
       } finally {
         setLoading(false);
       }
@@ -101,16 +103,16 @@ const StoriesSection = () => {
       <div className="flex overflow-x-auto pb-2 space-x-3 scrollbar-hide">
         <AddStoryButton onAddStory={handleAddStory} />
         
-        {stories.map((story, index) => (
-          <StoryItem 
-            key={story._id?.toString()}
-            story={story}
-            index={index}
-            onViewStory={viewStoryHandler}
-          />
-        ))}
-        
-        {stories.length === 0 && (
+        {stories && stories.length > 0 ? (
+          stories.map((story, index) => (
+            <StoryItem 
+              key={story._id?.toString() || index}
+              story={story}
+              index={index}
+              onViewStory={viewStoryHandler}
+            />
+          ))
+        ) : (
           <div className="flex items-center justify-center w-full py-4 text-gray-500">
             No stories yet. Be the first to add one!
           </div>
@@ -123,12 +125,14 @@ const StoriesSection = () => {
         onCreateStory={handleCreateStory}
       />
       
-      <ViewStoryModal 
-        isOpen={isViewStoryOpen}
-        onClose={() => setIsViewStoryOpen(false)}
-        stories={stories}
-        initialStoryIndex={selectedStoryIndex}
-      />
+      {stories && stories.length > 0 && (
+        <ViewStoryModal 
+          isOpen={isViewStoryOpen}
+          onClose={() => setIsViewStoryOpen(false)}
+          stories={stories}
+          initialStoryIndex={selectedStoryIndex}
+        />
+      )}
     </div>
   );
 };
