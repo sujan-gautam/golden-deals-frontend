@@ -24,6 +24,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Store registered users in local storage for demonstration purposes
+  // In a real app, this would be handled by the backend
+  const getRegisteredUsers = (): { email: string; password: string }[] => {
+    try {
+      const users = localStorage.getItem('registeredUsers');
+      return users ? JSON.parse(users) : [];
+    } catch (error) {
+      console.error('Error parsing registered users', error);
+      return [];
+    }
+  };
+
+  const saveRegisteredUser = (email: string, password: string) => {
+    try {
+      const users = getRegisteredUsers();
+      const existingUser = users.find(user => user.email === email);
+      
+      if (!existingUser) {
+        const updatedUsers = [...users, { email, password }];
+        localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
+      }
+    } catch (error) {
+      console.error('Error saving registered user', error);
+    }
+  };
+
+  const isRegisteredUser = (email: string, password: string): boolean => {
+    const users = getRegisteredUsers();
+    return users.some(user => user.email === email && user.password === password);
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -49,6 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Check if user exists in our registered users
+      if (!isRegisteredUser(email, password)) {
+        throw new Error("Invalid email or password. This user is not registered.");
+      }
+      
       const { token, user } = await loginUser(email, password);
       localStorage.setItem('token', token);
       setUser(user);
@@ -76,7 +112,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Check if user already exists
+      const users = getRegisteredUsers();
+      const existingUser = users.find(user => user.email === email);
+      
+      if (existingUser) {
+        throw new Error("A user with this email already exists");
+      }
+      
       const { token, user } = await registerUser(name, email, password);
+      
+      // Store the user credentials for future login validation
+      saveRegisteredUser(email, password);
+      
       localStorage.setItem('token', token);
       setUser(user);
       
