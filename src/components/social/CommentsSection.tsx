@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -31,9 +30,10 @@ interface Comment {
 interface CommentsProps {
   postId: string;
   initialComments?: Comment[];
+  onComment?: (content?: string) => void;
 }
 
-const CommentsSection = ({ postId, initialComments = [] }: CommentsProps) => {
+const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsProps) => {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState('');
   const [showReplies, setShowReplies] = useState<Record<string, boolean>>({});
@@ -79,6 +79,11 @@ const CommentsSection = ({ postId, initialComments = [] }: CommentsProps) => {
         title: "Comment added",
         description: "Your comment has been posted successfully.",
       });
+      
+      // Call the onComment prop if provided
+      if (onComment) {
+        onComment(newComment);
+      }
     }, 500);
   };
 

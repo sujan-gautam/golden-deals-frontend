@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BrandedLikeButtonProps {
-  initialLikes: number;
+  initialLikes?: number;
   isLiked?: boolean;
   onLike?: (liked: boolean) => void;
 }
