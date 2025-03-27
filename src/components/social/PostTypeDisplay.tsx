@@ -134,6 +134,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           <BrandedLikeButton 
             onLike={onLike} 
             isLiked={post.liked} 
+            initialLikes={post.likes}
           />
           <Button
             variant="ghost"
@@ -158,9 +159,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           <div className="px-4 pb-4">
             <CommentsSection 
               postId={post._id?.toString() || ''}
-              initialComments={[
-                // We'll start with an empty comments section that users can fill
-              ]}
+              initialComments={[]}
               onComment={onComment}
             />
           </div>
@@ -273,7 +272,8 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
           <BrandedLikeButton 
             onLike={onLike} 
-            isLiked={post.liked} 
+            isLiked={post.liked}
+            initialLikes={post.likes}
           />
           <Button
             variant="ghost"
@@ -298,9 +298,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           <div className="px-4 pb-4">
             <CommentsSection 
               postId={post._id?.toString() || ''}
-              initialComments={[
-                // We'll start with an empty comments section that users can fill
-              ]}
+              initialComments={[]}
               onComment={onComment}
             />
           </div>
@@ -408,7 +406,8 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
           <BrandedLikeButton 
             onLike={onLike} 
-            isLiked={post.liked} 
+            isLiked={post.liked}
+            initialLikes={post.likes}
           />
           <Button
             variant="ghost"
@@ -433,9 +432,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           <div className="px-4 pb-4">
             <CommentsSection 
               postId={post._id?.toString() || ''}
-              initialComments={[
-                // We'll start with an empty comments section that users can fill
-              ]}
+              initialComments={[]}
               onComment={onComment}
             />
           </div>

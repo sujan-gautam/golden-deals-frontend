@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SocialLayout from "@/components/layout/SocialLayout";
 import CreatePostModal from "@/components/social/CreatePostModal";
 import PostTypeDisplay from "@/components/social/PostTypeDisplay";
-import StoriesSection from "@/components/social/StoriesSection";
 import {
   Tabs,
   TabsContent,
@@ -159,9 +158,6 @@ const Feed = () => {
   return (
     <SocialLayout>
       <div className="max-w-xl mx-auto w-full px-4">
-        {/* Stories Section */}
-        <StoriesSection />
-        
         {/* Create Post Card */}
         <div className="bg-white rounded-xl shadow p-4 mb-6">
           <div className="flex items-center space-x-3">
@@ -230,18 +226,6 @@ const Feed = () => {
                 <div className="mt-4 h-24 bg-gray-200 rounded"></div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow animate-pulse">
-              <div className="p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-                  </div>
-                </div>
-                <div className="mt-4 h-24 bg-gray-200 rounded"></div>
-              </div>
-            </div>
           </div>
         ) : (
           <>
@@ -252,7 +236,7 @@ const Feed = () => {
                   post={{
                     ...post,
                     likes: Array.isArray(post.likes) ? post.likes.length : 0,
-                    liked: Array.isArray(post.likes) ? post.likes.includes(user?._id as string) : false
+                    liked: Array.isArray(post.likes) && user?._id ? post.likes.includes(user._id as string) : false
                   }}
                   onLike={() => handleLikePost(post._id as string)}
                   onComment={(content) => {
@@ -265,7 +249,8 @@ const Feed = () => {
               ))
             ) : (
               <div className="text-center py-10 text-gray-500">
-                No {activeTab === 'all' ? 'posts' : activeTab + 's'} to display
+                No {activeTab === 'all' ? 'posts' : activeTab + 's'} to display.
+                <p className="mt-2">Create your first {activeTab === 'all' ? 'post' : activeTab} by clicking on the box above!</p>
               </div>
             )}
           </>

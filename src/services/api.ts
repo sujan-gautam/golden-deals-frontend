@@ -1,3 +1,4 @@
+
 import { User } from '../types/user';
 import { Post, ProductPost, EventPost } from '../types/post';
 import { Story } from '../types/story';
@@ -32,7 +33,7 @@ const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
     
-    // Return mock data for development when API is unavailable
+    // Use local storage for persistence in development when API is unavailable
     if (endpoint === 'auth/login') {
       return mockLoginResponse(options.body ? JSON.parse(options.body as string) : {});
     }
@@ -45,8 +46,12 @@ const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
       return mockCurrentUserResponse();
     }
     
-    if (endpoint === 'posts') {
-      return mockPostsResponse();
+    if (endpoint === 'posts' && options.method === 'GET') {
+      return getLocalPosts();
+    }
+    
+    if (endpoint === 'posts' && options.method === 'POST') {
+      return saveLocalPost(options.body ? JSON.parse(options.body as string) : {});
     }
     
     if (endpoint === 'stories') {
@@ -90,12 +95,50 @@ export const createPost = async (post: Partial<Post>) => {
 };
 
 export const likePost = async (postId: string) => {
+  // Get posts from localStorage
+  const posts = JSON.parse(localStorage.getItem('posts') || '[]');
+  const userId = JSON.parse(localStorage.getItem('user') || '{}')._id;
+  
+  // Find the post and toggle like
+  const updatedPosts = posts.map((post: any) => {
+    if (post._id === postId) {
+      const likes = Array.isArray(post.likes) ? post.likes : [];
+      const userLiked = likes.includes(userId);
+      
+      return {
+        ...post,
+        likes: userLiked ? likes.filter((id: string) => id !== userId) : [...likes, userId]
+      };
+    }
+    return post;
+  });
+  
+  // Save back to localStorage
+  localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  
   return fetchAPI(`posts/${postId}/like`, {
     method: 'POST',
   });
 };
 
 export const commentOnPost = async (postId: string, content: string) => {
+  // Get posts from localStorage
+  const posts = JSON.parse(localStorage.getItem('posts') || '[]');
+  
+  // Find the post and increment comments
+  const updatedPosts = posts.map((post: any) => {
+    if (post._id === postId) {
+      return {
+        ...post,
+        comments: (post.comments || 0) + 1
+      };
+    }
+    return post;
+  });
+  
+  // Save back to localStorage
+  localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  
   return fetchAPI(`posts/${postId}/comments`, {
     method: 'POST',
     body: JSON.stringify({ content }),
@@ -186,6 +229,48 @@ export const uploadImage = async (file: File) => {
   return data;
 };
 
+// Local storage persistence helpers
+const getLocalPosts = () => {
+  try {
+    const posts = localStorage.getItem('posts');
+    return posts ? JSON.parse(posts) : [];
+  } catch (error) {
+    console.error('Error getting posts from localStorage', error);
+    return [];
+  }
+};
+
+const saveLocalPost = (postData: any) => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const posts = JSON.parse(localStorage.getItem('posts') || '[]');
+    
+    const newPost = {
+      _id: 'post-' + Date.now(),
+      userId: user._id,
+      user: {
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar
+      },
+      content: postData.content || postData.description || '',
+      image: postData.image,
+      likes: [],
+      comments: 0,
+      createdAt: new Date().toISOString(),
+      ...postData
+    };
+    
+    const updatedPosts = [newPost, ...posts];
+    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+    
+    return newPost;
+  } catch (error) {
+    console.error('Error saving post to localStorage', error);
+    throw new Error('Failed to save post locally');
+  }
+};
+
 // Mock data for development
 const mockLoginResponse = (credentials: { email: string, password: string }) => {
   const mockUser = {
@@ -196,6 +281,8 @@ const mockLoginResponse = (credentials: { email: string, password: string }) => 
     role: "user",
     createdAt: new Date().toISOString()
   };
+  
+  localStorage.setItem('user', JSON.stringify(mockUser));
   
   return {
     token: "mock-jwt-token-" + Date.now(),
@@ -213,6 +300,8 @@ const mockRegisterResponse = (userData: { name: string, email: string, password:
     createdAt: new Date().toISOString()
   };
   
+  localStorage.setItem('user', JSON.stringify(mockUser));
+  
   return {
     token: "mock-jwt-token-" + Date.now(),
     user: mockUser
@@ -220,7 +309,12 @@ const mockRegisterResponse = (userData: { name: string, email: string, password:
 };
 
 const mockCurrentUserResponse = () => {
-  return {
+  const storedUser = localStorage.getItem('user');
+  if (storedUser) {
+    return JSON.parse(storedUser);
+  }
+  
+  const defaultUser = {
     _id: "user123",
     name: "Demo User",
     email: "demo@example.com",
@@ -228,61 +322,11 @@ const mockCurrentUserResponse = () => {
     role: "user",
     createdAt: new Date().toISOString()
   };
-};
-
-const mockPostsResponse = () => {
-  return [
-    {
-      _id: "post1",
-      userId: "user123",
-      user: {
-        _id: "user123",
-        name: "Demo User",
-        avatar: "https://i.pravatar.cc/300?u=demo@example.com"
-      },
-      content: "This is a mock post for development when the API is not available.",
-      image: "https://picsum.photos/seed/post1/800/600",
-      likes: [],
-      comments: 3,
-      createdAt: new Date().toISOString(),
-      type: "post"
-    },
-    {
-      _id: "post2",
-      userId: "user456",
-      user: {
-        _id: "user456",
-        name: "Another User",
-        avatar: "https://i.pravatar.cc/300?u=another@example.com"
-      },
-      content: "This is a mock product listing.",
-      image: "https://picsum.photos/seed/product1/800/600",
-      likes: [],
-      comments: 2,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      type: "product",
-      productName: "Vintage Camera",
-      price: "$199.99",
-      condition: "Used - Like New",
-      status: "instock"
-    }
-  ];
+  
+  localStorage.setItem('user', JSON.stringify(defaultUser));
+  return defaultUser;
 };
 
 const mockStoriesResponse = () => {
-  return [
-    {
-      _id: "story1",
-      userId: "user123",
-      user: {
-        _id: "user123",
-        name: "Demo User",
-        avatar: "https://i.pravatar.cc/300?u=demo@example.com"
-      },
-      media: "https://picsum.photos/seed/story1/800/1200",
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      views: []
-    }
-  ];
+  return [];
 };
