@@ -19,50 +19,34 @@ import BrandedLikeButton from './BrandedLikeButton';
 import CommentsSection from './CommentsSection';
 import MessageSellerModal from './MessageSellerModal';
 import { formatDistance } from 'date-fns';
+import { Post, ProductPost as ProductPostType, EventPost as EventPostType } from '@/types/post';
+import { User } from '@/types/user';
 
-interface User {
-  id: string;
-  name: string;
-  avatar: string;
-}
-
-interface BasePost {
-  id: string;
-  user: User;
-  content: string;
+interface PostWithLiked extends Omit<Post, 'likes'> {
   likes: number;
   liked: boolean;
-  comments: number;
-  createdAt: string;
-  image?: string;
-  type: string;
 }
 
-interface ProductPost extends BasePost {
-  type: 'product';
-  productName: string;
-  price: string;
-  category?: string;
-  condition?: string;
-  status: 'instock' | 'lowstock' | 'soldout';
+interface ProductPost extends Omit<ProductPostType, 'likes'> {
+  likes: number;
+  liked: boolean;
 }
 
-interface EventPost extends BasePost {
-  type: 'event';
-  title: string;
-  date: string;
-  location: string;
+interface EventPost extends Omit<EventPostType, 'likes'> {
+  likes: number;
+  liked: boolean;
 }
 
-type Post = BasePost | ProductPost | EventPost;
+type PostDisplayType = PostWithLiked | ProductPost | EventPost;
 
 interface PostTypeDisplayProps {
-  post: Post;
+  post: PostDisplayType;
   onLike: () => void;
-  onComment: () => void;
+  onComment: (content?: string) => void;
+  currentUser?: User;
 }
 
-const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComment }) => {
+const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComment, currentUser }) => {
   const [showComments, setShowComments] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const { toast } = useToast();
@@ -116,7 +100,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div>
-          <Link to={`/profile/${post.user.id}`} className="font-medium text-gray-900 hover:underline">
+          <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
             {post.user.name}
           </Link>
           <div className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</div>
@@ -191,7 +175,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
-              postId={post.id}
+              postId={post._id?.toString() || ''}
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
@@ -285,7 +269,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
-              postId={post.id}
+              postId={post._id?.toString() || ''}
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
@@ -375,7 +359,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
-              postId={post.id}
+              postId={post._id?.toString() || ''}
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}

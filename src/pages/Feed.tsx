@@ -245,11 +245,14 @@ const Feed = () => {
                 key={post._id?.toString()}
                 post={{
                   ...post,
+                  likes: post.likes.length,
                   liked: post.likes.includes(user?._id as string)
                 }}
                 onLike={() => handleLikePost(post._id as string)}
-                onComment={content => {
-                  handleComment(post._id as string, content);
+                onComment={(content) => {
+                  if (content) {
+                    handleComment(post._id as string, content);
+                  }
                 }}
                 currentUser={user}
               />
