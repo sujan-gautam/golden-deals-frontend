@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import SocialLayout from '@/components/layout/SocialLayout';
 import ConversationList from '@/components/social/ConversationList';
 import MessageThread from '@/components/social/MessageThread';
@@ -252,7 +252,7 @@ const Messages = () => {
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
