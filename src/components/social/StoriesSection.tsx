@@ -13,8 +13,7 @@ const StoriesSection = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [isViewStoryOpen, setIsViewStoryOpen] = useState(false);
-  const [currentStory, setCurrentStory] = useState<Story | null>(null);
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
@@ -78,39 +77,9 @@ const StoriesSection = () => {
     }
   };
   
-  const viewStoryHandler = async (story: Story, index: number) => {
-    setCurrentStory(story);
-    setCurrentStoryIndex(index);
+  const viewStoryHandler = (story: Story, index: number) => {
+    setSelectedStoryIndex(index);
     setIsViewStoryOpen(true);
-    
-    try {
-      await viewStory(story._id as string);
-    } catch (err) {
-      console.error("Failed to update story view count", err);
-    }
-    
-    // Auto-close story after 5 seconds
-    setTimeout(() => {
-      if (index < stories.length - 1) {
-        viewStoryHandler(stories[index + 1], index + 1);
-      } else {
-        setIsViewStoryOpen(false);
-      }
-    }, 5000);
-  };
-  
-  const handleNextStory = () => {
-    if (currentStoryIndex < stories.length - 1) {
-      viewStoryHandler(stories[currentStoryIndex + 1], currentStoryIndex + 1);
-    } else {
-      setIsViewStoryOpen(false);
-    }
-  };
-  
-  const handlePrevStory = () => {
-    if (currentStoryIndex > 0) {
-      viewStoryHandler(stories[currentStoryIndex - 1], currentStoryIndex - 1);
-    }
   };
   
   if (loading) {
@@ -157,11 +126,8 @@ const StoriesSection = () => {
       <ViewStoryModal 
         isOpen={isViewStoryOpen}
         onClose={() => setIsViewStoryOpen(false)}
-        currentStory={currentStory}
-        currentStoryIndex={currentStoryIndex}
-        storiesCount={stories.length}
-        onNextStory={handleNextStory}
-        onPrevStory={handlePrevStory}
+        stories={stories}
+        initialStoryIndex={selectedStoryIndex}
       />
     </div>
   );

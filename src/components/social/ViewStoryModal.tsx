@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,14 +17,16 @@ interface ViewStoryModalProps {
 const ViewStoryModal: React.FC<ViewStoryModalProps> = ({
   isOpen,
   onClose,
-  stories,
+  stories = [],  // Provide default empty array
   initialStoryIndex = 0
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialStoryIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   
-  const currentStory = stories[currentIndex];
+  // Guard against empty stories array or invalid index
+  const validIndex = stories.length > 0 ? Math.min(currentIndex, stories.length - 1) : 0;
+  const currentStory = stories.length > 0 ? stories[validIndex] : null;
   
   useEffect(() => {
     if (!isOpen || !currentStory) return;
@@ -148,7 +151,7 @@ const ViewStoryModal: React.FC<ViewStoryModalProps> = ({
           onTouchEnd={() => setIsPaused(false)}
         >
           <img 
-            src={currentStory.media} 
+            src={currentStory.image} // Use image instead of media to match Story type
             alt="Story" 
             className="h-full w-full object-contain"
           />
