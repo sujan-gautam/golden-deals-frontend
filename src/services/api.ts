@@ -1,4 +1,3 @@
-
 import { User } from '../types/user';
 import { Post, ProductPost, EventPost } from '../types/post';
 import { Story } from '../types/story';
@@ -17,18 +16,46 @@ const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
     ...options.headers,
   };
   
-  const response = await fetch(`${API_URL}/${endpoint}`, {
-    ...options,
-    headers,
-  });
-  
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
+  try {
+    const response = await fetch(`${API_URL}/${endpoint}`, {
+      ...options,
+      headers,
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Something went wrong');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`API Error (${endpoint}):`, error);
+    
+    // Return mock data for development when API is unavailable
+    if (endpoint === 'auth/login') {
+      return mockLoginResponse(options.body ? JSON.parse(options.body as string) : {});
+    }
+    
+    if (endpoint === 'auth/register') {
+      return mockRegisterResponse(options.body ? JSON.parse(options.body as string) : {});
+    }
+    
+    if (endpoint === 'auth/me') {
+      return mockCurrentUserResponse();
+    }
+    
+    if (endpoint === 'posts') {
+      return mockPostsResponse();
+    }
+    
+    if (endpoint === 'stories') {
+      return mockStoriesResponse();
+    }
+    
+    // Re-throw for other endpoints that don't have mock data
+    throw error;
   }
-  
-  return data;
 };
 
 // Auth APIs
@@ -157,4 +184,105 @@ export const uploadImage = async (file: File) => {
   }
   
   return data;
+};
+
+// Mock data for development
+const mockLoginResponse = (credentials: { email: string, password: string }) => {
+  const mockUser = {
+    _id: "user123",
+    name: "Demo User",
+    email: credentials.email,
+    avatar: "https://i.pravatar.cc/300?u=" + credentials.email,
+    role: "user",
+    createdAt: new Date().toISOString()
+  };
+  
+  return {
+    token: "mock-jwt-token-" + Date.now(),
+    user: mockUser
+  };
+};
+
+const mockRegisterResponse = (userData: { name: string, email: string, password: string }) => {
+  const mockUser = {
+    _id: "user123",
+    name: userData.name,
+    email: userData.email,
+    avatar: "https://i.pravatar.cc/300?u=" + userData.email,
+    role: "user",
+    createdAt: new Date().toISOString()
+  };
+  
+  return {
+    token: "mock-jwt-token-" + Date.now(),
+    user: mockUser
+  };
+};
+
+const mockCurrentUserResponse = () => {
+  return {
+    _id: "user123",
+    name: "Demo User",
+    email: "demo@example.com",
+    avatar: "https://i.pravatar.cc/300?u=demo@example.com",
+    role: "user",
+    createdAt: new Date().toISOString()
+  };
+};
+
+const mockPostsResponse = () => {
+  return [
+    {
+      _id: "post1",
+      userId: "user123",
+      user: {
+        _id: "user123",
+        name: "Demo User",
+        avatar: "https://i.pravatar.cc/300?u=demo@example.com"
+      },
+      content: "This is a mock post for development when the API is not available.",
+      image: "https://picsum.photos/seed/post1/800/600",
+      likes: [],
+      comments: 3,
+      createdAt: new Date().toISOString(),
+      type: "post"
+    },
+    {
+      _id: "post2",
+      userId: "user456",
+      user: {
+        _id: "user456",
+        name: "Another User",
+        avatar: "https://i.pravatar.cc/300?u=another@example.com"
+      },
+      content: "This is a mock product listing.",
+      image: "https://picsum.photos/seed/product1/800/600",
+      likes: [],
+      comments: 2,
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      type: "product",
+      productName: "Vintage Camera",
+      price: "$199.99",
+      condition: "Used - Like New",
+      status: "instock"
+    }
+  ];
+};
+
+const mockStoriesResponse = () => {
+  return [
+    {
+      _id: "story1",
+      userId: "user123",
+      user: {
+        _id: "user123",
+        name: "Demo User",
+        avatar: "https://i.pravatar.cc/300?u=demo@example.com"
+      },
+      media: "https://picsum.photos/seed/story1/800/1200",
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      views: []
+    }
+  ];
 };

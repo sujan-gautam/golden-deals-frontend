@@ -1,6 +1,8 @@
 
 import { useState } from 'react';
 import { X, Mail, Lock, User, Facebook, Github } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/components/ui/use-toast';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -9,8 +11,29 @@ interface AuthModalProps {
 
 const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { login, register, loading } = useAuth();
+  const { toast } = useToast();
   
   if (!isOpen) return null;
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (isLogin) {
+        await login(email, password);
+      } else {
+        await register(name, email, password);
+      }
+      
+      onClose();
+    } catch (error) {
+      // Error handling is done in the auth hook
+    }
+  };
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -32,7 +55,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           </p>
         </div>
         
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -47,6 +70,9 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   id="name"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-usm-gold focus:border-transparent"
                   placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required={!isLogin}
                 />
               </div>
             </div>
@@ -65,6 +91,9 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                 id="email"
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-usm-gold focus:border-transparent"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
           </div>
@@ -82,22 +111,30 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                 id="password"
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-usm-gold focus:border-transparent"
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
           </div>
           
           {isLogin && (
             <div className="flex justify-end">
-              <button className="text-sm text-usm-gold hover:text-usm-gold-dark transition-colors">
+              <button type="button" className="text-sm text-usm-gold hover:text-usm-gold-dark transition-colors">
                 Forgot password?
               </button>
             </div>
           )}
           
           <button
+            type="submit"
             className="w-full bg-usm-gold text-black font-medium py-2 rounded-lg hover:bg-usm-gold-dark transition-colors"
+            disabled={loading}
           >
-            {isLogin ? 'Sign In' : 'Create Account'}
+            {loading
+              ? (isLogin ? "Signing in..." : "Creating account...")
+              : (isLogin ? "Sign In" : "Create Account")
+            }
           </button>
           
           <div className="relative flex items-center justify-center mt-6 mb-4">
@@ -106,11 +143,17 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button 
+              type="button"
+              className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <Facebook className="h-5 w-5 text-blue-600 mr-2" />
               <span className="text-sm">Facebook</span>
             </button>
-            <button className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button 
+              type="button"
+              className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -133,12 +176,13 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
               <span className="text-sm">Google</span>
             </button>
           </div>
-        </div>
+        </form>
         
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
             {isLogin ? "Don't have an account?" : "Already have an account?"}
             <button
+              type="button"
               onClick={() => setIsLogin(!isLogin)}
               className="ml-1 text-usm-gold hover:text-usm-gold-dark transition-colors font-medium"
             >

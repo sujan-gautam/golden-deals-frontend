@@ -1,20 +1,18 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  ShoppingBag, 
-  Calendar, 
-  MapPin, 
-  DollarSign, 
-  Clock, 
-  MessageCircle,
-  Share2
-} from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from 'react-router-dom';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
+import { Share, MoreVertical, MessageCircle, Heart, Calendar, MapPin, ShoppingBag, DollarSign, Info } from 'lucide-react';
 import BrandedLikeButton from './BrandedLikeButton';
 import CommentsSection from './CommentsSection';
 import MessageSellerModal from './MessageSellerModal';
@@ -50,128 +48,109 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
   const [showComments, setShowComments] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const { toast } = useToast();
-
+  
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.origin + '/post/' + post._id)
+      .then(() => {
+        toast({
+          title: "Link copied!",
+          description: "Post link has been copied to your clipboard.",
+        });
+      })
+      .catch(() => {
+        toast({
+          title: "Failed to copy",
+          description: "Could not copy the link, please try again.",
+          variant: "destructive",
+        });
+      });
+  };
+  
   const formatTimeAgo = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      return formatDistance(date, new Date(), { addSuffix: true });
+      return formatDistance(new Date(dateString), new Date(), { addSuffix: true });
     } catch (e) {
-      return 'recently';
+      return 'some time ago';
     }
   };
-
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({
-      title: "Link copied",
-      description: "Post link has been copied to clipboard.",
-    });
-  };
-
-  const handlePurchase = (productPost: ProductPost) => {
-    if (productPost.status === 'soldout') {
-      toast({
-        title: "Product unavailable",
-        description: "This product is currently sold out.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    toast({
-      title: "Added to cart",
-      description: `${productPost.productName} has been added to your cart.`,
-    });
-  };
-
-  const handleAttendEvent = (eventPost: EventPost) => {
-    toast({
-      title: "Event saved",
-      description: `You're now attending "${eventPost.title}".`,
-    });
-  };
-
-  // Shared post header
-  const PostHeader = () => (
-    <div className="flex justify-between items-center mb-3">
-      <div className="flex items-center space-x-3">
-        <Avatar>
-          <AvatarImage src={post.user.avatar} alt={post.user.name} />
-          <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div>
-          <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
-            {post.user.name}
-          </Link>
-          <div className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Shared post footer
-  const PostFooter = () => (
-    <CardFooter className="px-4 py-3 border-t flex justify-between">
-      <BrandedLikeButton 
-        initialLikes={post.likes} 
-        isLiked={post.liked} 
-        onLike={onLike} 
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        className="flex-1 text-gray-600"
-        onClick={() => {
-          setShowComments(!showComments);
-          if (!showComments) onComment();
-        }}
-      >
-        <MessageCircle className="mr-2 h-5 w-5" />
-        Comment
-      </Button>
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="flex-1 text-gray-600"
-        onClick={handleShare}
-      >
-        <Share2 className="mr-2 h-5 w-5" />
-        Share
-      </Button>
-    </CardFooter>
-  );
-
-  // Regular post display
-  if (post.type === 'post' || !post.type) {
+  
+  // Generic post view
+  if (post.type === 'post') {
     return (
-      <Card className="mb-4 overflow-hidden">
-        <CardContent className="p-4">
-          <PostHeader />
-          
-          <div className="mb-3">
-            <p className="text-gray-800 whitespace-pre-line">{post.content}</p>
-          </div>
-          
-          {post.image && (
-            <div className="rounded-lg overflow-hidden -mx-4 mb-3">
-              <img
-                src={post.image}
-                alt="Post attachment"
-                className="w-full object-cover"
-                style={{ maxHeight: '500px' }}
-              />
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between text-sm text-gray-500 pt-2">
-            <div className="flex items-center">
-              <span>{post.likes} likes • {post.comments} comments</span>
+      <Card className="mb-6 overflow-hidden">
+        {/* Post Header with User Info */}
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarImage src={post.user.avatar} alt={post.user.name} />
+              <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
+                {post.user.name}
+              </Link>
+              <div className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</div>
             </div>
           </div>
-        </CardContent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-5 w-5" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Report post</DropdownMenuItem>
+              <DropdownMenuItem>Save post</DropdownMenuItem>
+              <DropdownMenuItem>Hide posts from this user</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         
-        <PostFooter />
+        {/* Post Content */}
+        <div className="px-4 pb-3">
+          <p className="text-gray-800 whitespace-pre-line">{post.content}</p>
+        </div>
         
+        {/* Post Image (if any) */}
+        {post.image && (
+          <div className="aspect-video bg-gray-100">
+            <img
+              src={post.image}
+              alt="Post attachment"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        {/* Like & Comment Counts */}
+        <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
+          <div>{post.likes} likes</div>
+          <div>{post.comments} comments</div>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
+          <BrandedLikeButton onClick={onLike} liked={post.liked} />
+          <Button
+            variant="ghost"
+            className="flex items-center justify-center"
+            onClick={() => setShowComments(!showComments)}
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Comment
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex items-center justify-center"
+            onClick={handleShare}
+          >
+            <Share className="h-5 w-5 mr-2" />
+            Share
+          </Button>
+        </div>
+        
+        {/* Comments Section (expandable) */}
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
@@ -179,93 +158,136 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
+              onAddComment={onComment}
             />
           </div>
         )}
       </Card>
     );
   }
-
-  // Product post display
+  
+  // Product listing view
   if (post.type === 'product') {
     const productPost = post as ProductPost;
-    
     return (
-      <Card className="mb-4 overflow-hidden">
-        <CardContent className="p-4">
-          <PostHeader />
-          
-          <div className="mb-3">
-            <div className="flex justify-between items-start">
-              <h3 className="text-lg font-semibold">{productPost.productName}</h3>
+      <Card className="mb-6 overflow-hidden">
+        {/* Product Header with User Info and Product Badge */}
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarImage src={post.user.avatar} alt={post.user.name} />
+              <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
               <div className="flex items-center">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <span className="font-bold text-green-600">{productPost.price}</span>
+                <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
+                  {post.user.name}
+                </Link>
+                <Badge variant="outline" className="ml-2 bg-usm-gold text-black">
+                  <ShoppingBag className="h-3 w-3 mr-1" />
+                  Product
+                </Badge>
               </div>
+              <div className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</div>
             </div>
-            
-            <div className="flex items-center mt-1 mb-2">
-              <Badge 
-                variant={
-                  productPost.status === 'instock' ? 'secondary' :
-                  productPost.status === 'lowstock' ? 'default' : 'destructive'
-                }
-                className="mr-2"
-              >
-                {productPost.status === 'instock' ? 'In Stock' : 
-                 productPost.status === 'lowstock' ? 'Low Stock' : 'Sold Out'}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-5 w-5" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Report listing</DropdownMenuItem>
+              <DropdownMenuItem>Save to wishlist</DropdownMenuItem>
+              <DropdownMenuItem>Hide posts from this seller</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        
+        {/* Product Image */}
+        {post.image && (
+          <div className="aspect-video bg-gray-100">
+            <img
+              src={post.image}
+              alt={productPost.productName}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        {/* Product Details */}
+        <div className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-xl font-semibold text-gray-900">{productPost.productName}</h3>
+            <div className="text-lg font-bold text-usm-gold flex items-center">
+              <DollarSign className="h-5 w-5" />
+              {productPost.price}
+            </div>
+          </div>
+          
+          <p className="text-gray-700 mb-3">{post.content}</p>
+          
+          <div className="flex flex-wrap gap-2 mb-3">
+            {productPost.condition && (
+              <Badge variant="secondary" className="flex items-center">
+                <Info className="h-3 w-3 mr-1" />
+                {productPost.condition}
               </Badge>
-              
-              {productPost.condition && (
-                <span className="text-xs text-gray-500 mr-2">
-                  Condition: {productPost.condition}
-                </span>
-              )}
-              
-              {productPost.category && (
-                <span className="text-xs text-gray-500">
-                  Category: {productPost.category}
-                </span>
-              )}
-            </div>
-            
-            <p className="text-gray-800 whitespace-pre-line">{post.content}</p>
+            )}
+            {productPost.category && (
+              <Badge variant="outline" className="flex items-center">
+                {productPost.category}
+              </Badge>
+            )}
+            <Badge className={`flex items-center ${
+              productPost.status === 'instock' ? 'bg-green-100 text-green-800' : 
+              productPost.status === 'lowstock' ? 'bg-yellow-100 text-yellow-800' : 
+              'bg-red-100 text-red-800'
+            }`}>
+              {productPost.status === 'instock' ? 'In Stock' : 
+               productPost.status === 'lowstock' ? 'Low Stock' : 
+               'Sold Out'}
+            </Badge>
           </div>
           
-          {post.image && (
-            <div className="rounded-lg overflow-hidden mb-3">
-              <img
-                src={post.image}
-                alt="Product"
-                className="w-full object-cover"
-                style={{ maxHeight: '400px' }}
-              />
-            </div>
-          )}
-          
-          <div className="mt-4">
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="mr-2"
-              onClick={() => handlePurchase(productPost)}
-              disabled={productPost.status === 'soldout'}
-            >
-              <ShoppingBag className="h-4 w-4 mr-2" />
-              {productPost.status !== 'soldout' ? 'Purchase' : 'Join Waitlist'}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsMessageModalOpen(true)}
-            >
-              Message Seller
-            </Button>
-          </div>
-        </CardContent>
+          <Button 
+            className="w-full bg-usm-gold text-black hover:bg-usm-gold-dark mb-3"
+            onClick={() => setIsMessageModalOpen(true)}
+          >
+            Message Seller
+          </Button>
+        </div>
         
-        <PostFooter />
+        {/* Like & Comment Counts */}
+        <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
+          <div>{post.likes} likes</div>
+          <div>{post.comments} comments</div>
+        </div>
         
+        {/* Action Buttons */}
+        <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
+          <BrandedLikeButton onClick={onLike} liked={post.liked} />
+          <Button
+            variant="ghost"
+            className="flex items-center justify-center"
+            onClick={() => setShowComments(!showComments)}
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Comment
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex items-center justify-center"
+            onClick={handleShare}
+          >
+            <Share className="h-5 w-5 mr-2" />
+            Share
+          </Button>
+        </div>
+        
+        {/* Comments Section (expandable) */}
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
@@ -273,89 +295,131 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
+              onAddComment={onComment}
             />
           </div>
         )}
         
-        <MessageSellerModal 
+        {/* Message Seller Modal */}
+        <MessageSellerModal
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
-          seller={post.user}
+          seller={{
+            _id: post.user._id,
+            name: post.user.name,
+            avatar: post.user.avatar
+          }}
           productName={productPost.productName}
         />
       </Card>
     );
   }
-
-  // Event post display
+  
+  // Event view
   if (post.type === 'event') {
     const eventPost = post as EventPost;
-    
     return (
-      <Card className="mb-4 overflow-hidden">
-        <CardContent className="p-4">
-          <PostHeader />
-          
-          <div className="mb-3">
-            <h3 className="text-lg font-semibold">{eventPost.title}</h3>
-            
-            <div className="flex flex-col space-y-2 mt-2 mb-3">
-              <div className="flex items-center text-gray-600">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span>{new Date(eventPost.date).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
+      <Card className="mb-6 overflow-hidden">
+        {/* Event Header with User Info and Event Badge */}
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarImage src={post.user.avatar} alt={post.user.name} />
+              <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center">
+                <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
+                  {post.user.name}
+                </Link>
+                <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  Event
+                </Badge>
               </div>
-              
-              <div className="flex items-center text-gray-600">
-                <Clock className="h-4 w-4 mr-2" />
-                <span>{new Date(eventPost.date).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}</span>
-              </div>
-              
-              <div className="flex items-center text-gray-600">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span>{eventPost.location}</span>
-              </div>
+              <div className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</div>
             </div>
-            
-            <p className="text-gray-800 whitespace-pre-line">{post.content}</p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-5 w-5" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Report event</DropdownMenuItem>
+              <DropdownMenuItem>Add to calendar</DropdownMenuItem>
+              <DropdownMenuItem>Hide events from this user</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        
+        {/* Event Image */}
+        {post.image && (
+          <div className="aspect-video bg-gray-100">
+            <img
+              src={post.image}
+              alt={eventPost.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        {/* Event Details */}
+        <div className="p-4">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">{eventPost.title}</h3>
+          <p className="text-gray-700 mb-3">{post.content}</p>
+          
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center text-gray-600">
+              <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+              <span>{eventPost.date}</span>
+            </div>
+            <div className="flex items-center text-gray-600">
+              <MapPin className="h-5 w-5 mr-2 text-red-500" />
+              <span>{eventPost.location}</span>
+            </div>
           </div>
           
-          {post.image && (
-            <div className="rounded-lg overflow-hidden mb-3">
-              <img
-                src={post.image}
-                alt="Event"
-                className="w-full object-cover"
-                style={{ maxHeight: '400px' }}
-              />
-            </div>
-          )}
-          
-          <div className="mt-4">
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="mr-2"
-              onClick={() => handleAttendEvent(eventPost)}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Attend Event
+          <div className="grid grid-cols-2 gap-3">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              Interested
             </Button>
-            <Button variant="outline" size="sm">
-              Save Event
+            <Button variant="outline">
+              Share Event
             </Button>
           </div>
-        </CardContent>
+        </div>
         
-        <PostFooter />
+        {/* Like & Comment Counts */}
+        <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
+          <div>{post.likes} likes</div>
+          <div>{post.comments} comments</div>
+        </div>
         
+        {/* Action Buttons */}
+        <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
+          <BrandedLikeButton onClick={onLike} liked={post.liked} />
+          <Button
+            variant="ghost"
+            className="flex items-center justify-center"
+            onClick={() => setShowComments(!showComments)}
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Comment
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex items-center justify-center"
+            onClick={handleShare}
+          >
+            <Share className="h-5 w-5 mr-2" />
+            Share
+          </Button>
+        </div>
+        
+        {/* Comments Section (expandable) */}
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
@@ -363,13 +427,14 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
+              onAddComment={onComment}
             />
           </div>
         )}
       </Card>
     );
   }
-
+  
   return null;
 };
 

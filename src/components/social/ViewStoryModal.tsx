@@ -1,106 +1,181 @@
-
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Progress } from "@/components/ui/progress";
 import { Story } from '@/types/story';
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { viewStory } from '@/services/api';
+import { formatDistance } from 'date-fns';
 
 interface ViewStoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentStory: Story | null;
-  currentStoryIndex: number;
-  storiesCount: number;
-  onNextStory: () => void;
-  onPrevStory: () => void;
+  stories: Story[];
+  initialStoryIndex: number;
 }
 
-const ViewStoryModal = ({
+const ViewStoryModal: React.FC<ViewStoryModalProps> = ({
   isOpen,
   onClose,
-  currentStory,
-  currentStoryIndex,
-  storiesCount,
-  onNextStory,
-  onPrevStory
-}: ViewStoryModalProps) => {
-  if (!currentStory) return null;
-
+  stories,
+  initialStoryIndex = 0
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(initialStoryIndex);
+  const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  
+  const currentStory = stories[currentIndex];
+  
+  useEffect(() => {
+    if (!isOpen || !currentStory) return;
+    
+    // Mark story as viewed
+    const markAsViewed = async () => {
+      try {
+        await viewStory(currentStory._id?.toString() || '');
+      } catch (error) {
+        console.error('Failed to mark story as viewed', error);
+      }
+    };
+    
+    markAsViewed();
+    
+    // Reset progress when story changes
+    setProgress(0);
+    
+    // Auto-progress timer
+    const storyDuration = 5000; // 5 seconds per story
+    const interval = 100; // Update progress every 100ms
+    const step = (interval / storyDuration) * 100;
+    
+    const timer = setInterval(() => {
+      if (!isPaused) {
+        setProgress(prev => {
+          const newProgress = prev + step;
+          
+          // Move to next story when progress completes
+          if (newProgress >= 100) {
+            if (currentIndex < stories.length - 1) {
+              setCurrentIndex(prev => prev + 1);
+            } else {
+              // Close modal when all stories are viewed
+              clearInterval(timer);
+              onClose();
+            }
+            return 0;
+          }
+          
+          return newProgress;
+        });
+      }
+    }, interval);
+    
+    return () => clearInterval(timer);
+  }, [isOpen, currentStory, currentIndex, isPaused, stories.length, onClose]);
+  
+  if (!isOpen || !currentStory) return null;
+  
+  const handleNext = () => {
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      onClose();
+    }
+  };
+  
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+    }
+  };
+  
+  const formatTimeAgo = (dateString: string) => {
+    try {
+      return formatDistance(new Date(dateString), new Date(), { addSuffix: true });
+    } catch (e) {
+      return 'some time ago';
+    }
+  };
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-black">
-        <AnimatePresence mode="wait">
-          <motion.div 
-            key={currentStory._id?.toString()}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="relative h-[70vh]"
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      onClick={onClose}
+    >
+      <div 
+        className="relative max-w-md w-full h-[80vh] max-h-[800px]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 z-10 text-white bg-black/20 rounded-full p-1 hover:bg-black/40 transition-colors"
+          aria-label="Close story"
+        >
+          <X className="h-6 w-6" />
+        </button>
+        
+        {/* Progress bar */}
+        <div className="absolute top-2 left-2 right-2 z-10 flex space-x-1">
+          {stories.map((_, index) => (
+            <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+              {index === currentIndex ? (
+                <Progress value={progress} className="h-full" />
+              ) : index < currentIndex ? (
+                <div className="h-full w-full bg-white" />
+              ) : null}
+            </div>
+          ))}
+        </div>
+        
+        {/* User info */}
+        <div className="absolute top-6 left-4 right-4 z-10 flex items-center">
+          <Avatar className="h-10 w-10 border-2 border-white">
+            <AvatarImage src={currentStory.user.avatar} />
+            <AvatarFallback>{currentStory.user.name[0]}</AvatarFallback>
+          </Avatar>
+          <div className="ml-3 text-white">
+            <div className="font-semibold">{currentStory.user.name}</div>
+            <div className="text-xs opacity-80">{formatTimeAgo(currentStory.createdAt)}</div>
+          </div>
+        </div>
+        
+        {/* Story content */}
+        <div 
+          className="h-full w-full bg-gray-900 rounded-lg overflow-hidden"
+          onMouseDown={() => setIsPaused(true)}
+          onMouseUp={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
+        >
+          <img 
+            src={currentStory.media} 
+            alt="Story" 
+            className="h-full w-full object-contain"
+          />
+        </div>
+        
+        {/* Navigation buttons */}
+        {currentIndex > 0 && (
+          <button
+            onClick={handlePrevious}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white bg-black/20 rounded-full p-1 hover:bg-black/40 transition-colors"
+            aria-label="Previous story"
           >
-            {/* Progress bar */}
-            <div className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1">
-              {Array.from({ length: storiesCount }).map((_, i) => (
-                <div 
-                  key={i}
-                  className="h-1 bg-white/30 rounded-full flex-1 overflow-hidden"
-                >
-                  {i === currentStoryIndex && (
-                    <motion.div 
-                      className="h-full bg-white"
-                      initial={{ width: "0%" }}
-                      animate={{ width: "100%" }}
-                      transition={{ duration: 5, ease: "linear" }}
-                    />
-                  )}
-                  {i < currentStoryIndex && (
-                    <div className="h-full bg-white w-full" />
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <div className="absolute top-0 left-0 right-0 p-4 z-10 flex items-center space-x-2 pt-6">
-              <Avatar className="h-8 w-8 border-2 border-white">
-                <AvatarImage src={currentStory.user.avatar} alt={currentStory.user.name} />
-                <AvatarFallback>{currentStory.user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <span className="text-white font-medium">{currentStory.user.name}</span>
-            </div>
-            
-            <img 
-              src={currentStory.image} 
-              alt="Story" 
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-4 right-4 h-8 w-8 p-0 rounded-full text-white"
-              onClick={onClose}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            
-            {/* Navigation buttons */}
-            <div className="absolute inset-y-0 left-0 w-1/4 flex items-center justify-start" onClick={onPrevStory}>
-              {currentStoryIndex > 0 && (
-                <div className="h-full cursor-pointer" />
-              )}
-            </div>
-            <div className="absolute inset-y-0 right-0 w-1/4 flex items-center justify-end" onClick={onNextStory}>
-              <div className="h-full cursor-pointer" />
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </DialogContent>
-    </Dialog>
+            <ChevronLeft className="h-8 w-8" />
+          </button>
+        )}
+        
+        {currentIndex < stories.length - 1 && (
+          <button
+            onClick={handleNext}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white bg-black/20 rounded-full p-1 hover:bg-black/40 transition-colors"
+            aria-label="Next story"
+          >
+            <ChevronRight className="h-8 w-8" />
+          </button>
+        )}
+      </div>
+    </div>
   );
 };
 
