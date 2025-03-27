@@ -30,13 +30,14 @@ const Feed = () => {
     const fetchPosts = async () => {
       try {
         const data = await getPosts();
-        setPosts(data);
+        setPosts(data || []); // Ensure we have an array even if data is undefined
       } catch (err: any) {
         toast({
           title: "Error",
           description: err.message || "Failed to load posts",
           variant: "destructive",
         });
+        setPosts([]); // Set empty array on error to prevent crashes
       } finally {
         setIsLoading(false);
       }
@@ -61,12 +62,16 @@ const Feed = () => {
       setPosts(prevPosts =>
         prevPosts.map(post => {
           if (post._id?.toString() === postId) {
-            const currentUserLiked = post.likes.includes(user?._id as string);
+            // Ensure post.likes is an array before checking includes
+            const likes = Array.isArray(post.likes) ? post.likes : [];
+            const userId = user?._id as string;
+            const currentUserLiked = likes.includes(userId);
+            
             return {
               ...post,
               likes: currentUserLiked
-                ? post.likes.filter(id => id !== user?._id)
-                : [...post.likes, user?._id as string]
+                ? likes.filter(id => id !== userId)
+                : [...likes, userId]
             };
           }
           return post;
@@ -240,25 +245,25 @@ const Feed = () => {
           </div>
         ) : (
           <>
-            {filteredPosts.map((post) => (
-              <PostTypeDisplay
-                key={post._id?.toString()}
-                post={{
-                  ...post,
-                  likes: post.likes.length,
-                  liked: post.likes.includes(user?._id as string)
-                }}
-                onLike={() => handleLikePost(post._id as string)}
-                onComment={(content) => {
-                  if (content) {
-                    handleComment(post._id as string, content);
-                  }
-                }}
-                currentUser={user}
-              />
-            ))}
-            
-            {filteredPosts.length === 0 && (
+            {filteredPosts.length > 0 ? (
+              filteredPosts.map((post) => (
+                <PostTypeDisplay
+                  key={post._id?.toString()}
+                  post={{
+                    ...post,
+                    likes: Array.isArray(post.likes) ? post.likes.length : 0,
+                    liked: Array.isArray(post.likes) ? post.likes.includes(user?._id as string) : false
+                  }}
+                  onLike={() => handleLikePost(post._id as string)}
+                  onComment={(content) => {
+                    if (content) {
+                      handleComment(post._id as string, content);
+                    }
+                  }}
+                  currentUser={user}
+                />
+              ))
+            ) : (
               <div className="text-center py-10 text-gray-500">
                 No {activeTab === 'all' ? 'posts' : activeTab + 's'} to display
               </div>

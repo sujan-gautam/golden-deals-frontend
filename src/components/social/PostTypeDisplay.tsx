@@ -131,7 +131,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         
         {/* Action Buttons */}
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
-          <BrandedLikeButton onClick={onLike} liked={post.liked} />
+          <BrandedLikeButton 
+            onAction={onLike} 
+            liked={post.liked} 
+          />
           <Button
             variant="ghost"
             className="flex items-center justify-center"
@@ -158,7 +161,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
-              onAddComment={onComment}
+              addComment={onComment}
             />
           </div>
         )}
@@ -268,7 +271,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         
         {/* Action Buttons */}
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
-          <BrandedLikeButton onClick={onLike} liked={post.liked} />
+          <BrandedLikeButton 
+            onAction={onLike} 
+            liked={post.liked} 
+          />
           <Button
             variant="ghost"
             className="flex items-center justify-center"
@@ -295,7 +301,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
-              onAddComment={onComment}
+              addComment={onComment}
             />
           </div>
         )}
@@ -305,7 +311,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
           seller={{
-            _id: post.user._id,
+            id: post.user._id,
             name: post.user.name,
             avatar: post.user.avatar
           }}
@@ -400,7 +406,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         
         {/* Action Buttons */}
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
-          <BrandedLikeButton onClick={onLike} liked={post.liked} />
+          <BrandedLikeButton 
+            onAction={onLike} 
+            liked={post.liked} 
+          />
           <Button
             variant="ghost"
             className="flex items-center justify-center"
@@ -427,7 +436,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               initialComments={[
                 // We'll start with an empty comments section that users can fill
               ]}
-              onAddComment={onComment}
+              addComment={onComment}
             />
           </div>
         )}
