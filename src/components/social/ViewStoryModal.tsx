@@ -36,7 +36,7 @@ const ViewStoryModal = ({
       <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-black">
         <AnimatePresence mode="wait">
           <motion.div 
-            key={currentStory.id}
+            key={currentStory._id?.toString()}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

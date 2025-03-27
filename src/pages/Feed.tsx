@@ -243,10 +243,14 @@ const Feed = () => {
             {filteredPosts.map((post) => (
               <PostTypeDisplay
                 key={post._id?.toString()}
-                post={post}
+                post={{
+                  ...post,
+                  liked: post.likes.includes(user?._id as string)
+                }}
                 onLike={() => handleLikePost(post._id as string)}
-                onComment={(content) => handleComment(post._id as string, content)}
-                isLiked={post.likes.includes(user?._id as string)}
+                onComment={content => {
+                  handleComment(post._id as string, content);
+                }}
                 currentUser={user}
               />
             ))}

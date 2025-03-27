@@ -12,6 +12,7 @@ interface MessageThreadProps {
   onSendMessage: (content: string) => void;
   onBack: () => void;
   isMobile: boolean;
+  loading?: boolean; // Add loading prop
 }
 
 const MessageThread = ({ 
@@ -19,12 +20,13 @@ const MessageThread = ({
   messages, 
   onSendMessage, 
   onBack,
-  isMobile
+  isMobile,
+  loading
 }: MessageThreadProps) => {
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const otherParticipant = conversation?.participants.find(p => p.id !== '1');
+  const otherParticipant = conversation?.participants.find(p => p._id !== '1');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,6 +56,29 @@ const MessageThread = ({
     );
   }
 
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center p-4 border-b">
+          <Avatar className="h-10 w-10 mr-3 animate-pulse bg-gray-200" />
+          <div className="flex-1">
+            <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse mt-1"></div>
+          </div>
+        </div>
+        <div className="flex-1 p-4 space-y-4">
+          <div className="flex justify-start">
+            <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse mr-2"></div>
+            <div className="rounded-lg py-2 px-3 bg-gray-200 animate-pulse h-10 w-32"></div>
+          </div>
+          <div className="flex justify-end">
+            <div className="rounded-lg py-2 px-3 bg-gray-200 animate-pulse h-10 w-40"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center p-4 border-b">
@@ -78,11 +103,11 @@ const MessageThread = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => {
           const isOwnMessage = message.senderId === '1';
-          const sender = conversation.participants.find(p => p.id === message.senderId);
+          const sender = conversation.participants.find(p => p._id === message.senderId);
 
           return (
             <div 
-              key={message.id} 
+              key={message._id?.toString()}
               className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
             >
               {!isOwnMessage && (
