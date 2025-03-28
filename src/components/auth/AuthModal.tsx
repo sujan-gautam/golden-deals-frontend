@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/hooks/use-auth';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2, Mail, Lock, User, AtSign, Eye, EyeOff } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -21,44 +21,85 @@ const AuthModal = ({ isOpen, onClose, initialTab = "signin", message }: AuthModa
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, register, error } = useAuth();
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const { login, register, error, loading } = useAuth();
   const { toast } = useToast();
+  
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    } else {
+      resetForm();
+    }
+  }, [isOpen, initialTab]);
+  
+  const validateEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+  
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
   
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setPasswordError('');
     
-    try {
-      await login(email, password);
-      resetForm();
-      onClose();
-    } catch (error) {
-      console.error("Sign in error:", error);
-    } finally {
-      setIsSubmitting(false);
+    // Validate email
+    if (!validateEmail(email)) {
+      setPasswordError('Please enter a valid email address');
+      return;
     }
+    
+    await login(email, password);
   };
   
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setPasswordError('');
     
-    try {
-      await register(name, email, password);
-      resetForm();
-      onClose();
-    } catch (error) {
-      console.error("Sign up error:", error);
-    } finally {
-      setIsSubmitting(false);
+    // Validate email
+    if (!validateEmail(email)) {
+      setPasswordError('Please enter a valid email address');
+      return;
     }
+    
+    // Validate password
+    if (!validatePassword(password)) {
+      setPasswordError('Password must be at least 6 characters long');
+      return;
+    }
+    
+    // Confirm password match
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    
+    await register(name, email, password);
   };
   
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setName('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
   
   return (
@@ -73,10 +114,10 @@ const AuthModal = ({ isOpen, onClose, initialTab = "signin", message }: AuthModa
           </DialogDescription>
         </DialogHeader>
         
-        {error && (
+        {(error || passwordError) && (
           <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 flex items-start mb-4">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
-            <p className="text-sm">{error}</p>
+            <p className="text-sm">{passwordError || error}</p>
           </div>
         )}
         
@@ -90,14 +131,18 @@ const AuthModal = ({ isOpen, onClose, initialTab = "signin", message }: AuthModa
             <form onSubmit={handleSignIn} className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="signin-email">Email</Label>
-                <Input 
-                  id="signin-email" 
-                  type="email" 
-                  placeholder="your.email@usm.edu" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    id="signin-email" 
+                    type="email" 
+                    placeholder="your.email@usm.edu" 
+                    className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -106,21 +151,37 @@ const AuthModal = ({ isOpen, onClose, initialTab = "signin", message }: AuthModa
                     Forgot password?
                   </Button>
                 </div>
-                <Input 
-                  id="signin-password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    id="signin-password" 
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••" 
+                    className="pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    onClick={togglePasswordVisibility}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
               <Button 
                 type="submit" 
                 className="w-full bg-usm-gold hover:bg-usm-gold-dark text-black"
-                disabled={isSubmitting}
+                disabled={loading}
               >
-                {isSubmitting ? "Signing in..." : "Sign In"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : "Sign In"}
               </Button>
               
               <div className="relative my-6">
@@ -168,44 +229,90 @@ const AuthModal = ({ isOpen, onClose, initialTab = "signin", message }: AuthModa
             <form onSubmit={handleSignUp} className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="signup-name">Full Name</Label>
-                <Input 
-                  id="signup-name" 
-                  type="text" 
-                  placeholder="John Doe" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    id="signup-name" 
+                    type="text" 
+                    placeholder="John Doe" 
+                    className="pl-10"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-email">Email</Label>
-                <Input 
-                  id="signup-email" 
-                  type="email" 
-                  placeholder="your.email@usm.edu" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    id="signup-email" 
+                    type="email" 
+                    placeholder="your.email@usm.edu" 
+                    className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-password">Password</Label>
-                <Input 
-                  id="signup-password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-gray-500">Password must be at least 8 characters long</p>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    id="signup-password" 
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••" 
+                    className="pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    onClick={togglePasswordVisibility}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">Password must be at least 6 characters long</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    id="signup-confirm-password" 
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••" 
+                    className="pl-10 pr-10"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    onClick={toggleConfirmPasswordVisibility}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
               <Button 
                 type="submit" 
                 className="w-full bg-usm-gold hover:bg-usm-gold-dark text-black"
-                disabled={isSubmitting}
+                disabled={loading}
               >
-                {isSubmitting ? "Creating Account..." : "Create Account"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : "Create Account"}
               </Button>
               
               <p className="text-xs text-center text-gray-500 mt-4">

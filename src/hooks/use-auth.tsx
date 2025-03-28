@@ -1,9 +1,10 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User } from '../types/user';
-import { loginUser, registerUser, getCurrentUser } from '../services/api';
+import { loginUser, registerUser } from '../services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import * as authService from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -25,69 +26,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Store registered users in local storage for demonstration purposes
-  // In a real app, this would be handled by the backend
-  const getRegisteredUsers = (): { email: string; password: string }[] => {
-    try {
-      const users = localStorage.getItem('registeredUsers');
-      return users ? JSON.parse(users) : [];
-    } catch (error) {
-      console.error('Error parsing registered users', error);
-      return [];
-    }
-  };
-
-  const saveRegisteredUser = (email: string, password: string) => {
-    try {
-      const users = getRegisteredUsers();
-      const existingUser = users.find(user => user.email === email);
-      
-      if (!existingUser) {
-        const updatedUsers = [...users, { email, password }];
-        localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
-      }
-    } catch (error) {
-      console.error('Error saving registered user', error);
-    }
-  };
-
-  const isRegisteredUser = (email: string, password: string): boolean => {
-    const users = getRegisteredUsers();
-    return users.some(user => user.email === email && user.password === password);
-  };
-
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      if (token && storedUser) {
-        try {
-          // For demo purposes, we'll use the stored user
-          // In a real app, we'd validate the token with the server
-          setUser(JSON.parse(storedUser));
-        } catch (err) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
+      try {
+        const currentUser = authService.getCurrentUser();
+        const token = authService.getToken();
+        
+        if (token && currentUser) {
+          setUser(currentUser);
         }
+      } catch (err) {
+        authService.clearAuthData();
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
     checkAuth();
   }, []);
 
   const updateUserProfile = (userData: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
+    try {
+      const updatedUser = authService.updateUserProfile(userData);
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
       
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
       });
     }
   };
@@ -98,14 +70,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Check if user exists in our registered users
-      if (!isRegisteredUser(email, password)) {
+      if (!authService.isRegisteredUser(email, password)) {
         throw new Error("Invalid email or password. This user is not registered.");
       }
       
-      const { token, user } = await loginUser(email, password);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
+      const response = await loginUser(email, password);
+      authService.saveAuthData(response);
+      setUser(response.user);
       
       toast({
         title: "Welcome back!",
@@ -131,21 +102,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Check if user already exists
-      const users = getRegisteredUsers();
+      const users = authService.getRegisteredUsers();
       const existingUser = users.find(user => user.email === email);
       
       if (existingUser) {
         throw new Error("A user with this email already exists");
       }
       
-      const { token, user } = await registerUser(name, email, password);
+      const response = await registerUser(name, email, password);
       
       // Store the user credentials for future login validation
-      saveRegisteredUser(email, password);
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
+      authService.saveRegisteredUser(email, password);
+      authService.saveAuthData(response);
+      setUser(response.user);
       
       toast({
         title: "Account created!",
@@ -166,8 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    authService.clearAuthData();
     setUser(null);
     navigate('/signin');
     
