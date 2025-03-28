@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -54,21 +55,25 @@ const App = () => (
                 <Messages />
               </ProtectedRoute>
             } />
-            <Route path="/message/:id" element={
+            
+            {/* Food Routes */}
+            <Route path="/food" element={
               <ProtectedRoute>
                 <NotFound />
               </ProtectedRoute>
             } />
-            <Route path="/marketplace" element={
+            <Route path="/food/:venue" element={
               <ProtectedRoute>
                 <NotFound />
               </ProtectedRoute>
             } />
-            <Route path="/marketplace/:id" element={
+            <Route path="/meal-plans" element={
               <ProtectedRoute>
                 <NotFound />
               </ProtectedRoute>
             } />
+            
+            {/* Events Routes */}
             <Route path="/events" element={
               <ProtectedRoute>
                 <NotFound />
@@ -79,7 +84,8 @@ const App = () => (
                 <NotFound />
               </ProtectedRoute>
             } />
-            <Route path="/settings" element={
+            
+            <Route path="/saved" element={
               <ProtectedRoute>
                 <NotFound />
               </ProtectedRoute>
@@ -127,6 +133,7 @@ const App = () => (
             <Route path="/contact" element={<NotFound />} />
             <Route path="/faq" element={<NotFound />} />
             <Route path="/terms" element={<NotFound />} />
+            <Route path="/category/:slug" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

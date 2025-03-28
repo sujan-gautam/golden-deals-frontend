@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Search, Menu, X, User, ShoppingBag, Bell, Heart } from 'lucide-react';
+import { Search, Menu, X, User, Utensils, CalendarDays, Bell, Heart } from 'lucide-react';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,16 +14,16 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <ShoppingBag className="h-6 w-6 text-usm-gold" />
-            <span className="text-xl font-bold text-black">Eagle<span className="text-usm-gold">Mart</span></span>
+            <Utensils className="h-6 w-6 text-usm-gold" />
+            <span className="text-xl font-bold text-black">Eagle<span className="text-usm-gold">Dine</span></span>
           </Link>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link to="/" className="text-gray-700 hover:text-usm-gold transition-colors">Home</Link>
-            <Link to="/categories" className="text-gray-700 hover:text-usm-gold transition-colors">Categories</Link>
+            <Link to="/food" className="text-gray-700 hover:text-usm-gold transition-colors">Food</Link>
             <Link to="/events" className="text-gray-700 hover:text-usm-gold transition-colors">Events</Link>
-            <Link to="/sell" className="text-gray-700 hover:text-usm-gold transition-colors">Sell</Link>
+            <Link to="/meal-plans" className="text-gray-700 hover:text-usm-gold transition-colors">Meal Plans</Link>
           </nav>
           
           {/* Desktop Actions */}
@@ -34,7 +34,7 @@ export const Navbar = () => {
             >
               <Search className="h-5 w-5" />
             </button>
-            <Link to="/wishlist" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+            <Link to="/saved" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
               <Heart className="h-5 w-5" />
             </Link>
             <Link to="/notifications" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
@@ -64,19 +64,19 @@ export const Navbar = () => {
               <Link to="/" className="text-lg font-medium py-2 border-b border-gray-100" onClick={() => setIsOpen(false)}>
                 Home
               </Link>
-              <Link to="/categories" className="text-lg font-medium py-2 border-b border-gray-100" onClick={() => setIsOpen(false)}>
-                Categories
+              <Link to="/food" className="text-lg font-medium py-2 border-b border-gray-100" onClick={() => setIsOpen(false)}>
+                Food
               </Link>
               <Link to="/events" className="text-lg font-medium py-2 border-b border-gray-100" onClick={() => setIsOpen(false)}>
                 Events
               </Link>
-              <Link to="/sell" className="text-lg font-medium py-2 border-b border-gray-100" onClick={() => setIsOpen(false)}>
-                Sell
+              <Link to="/meal-plans" className="text-lg font-medium py-2 border-b border-gray-100" onClick={() => setIsOpen(false)}>
+                Meal Plans
               </Link>
               <div className="flex items-center space-x-4 pt-4">
-                <Link to="/wishlist" className="flex items-center text-gray-700">
+                <Link to="/saved" className="flex items-center text-gray-700">
                   <Heart className="h-5 w-5 mr-2" />
-                  Wishlist
+                  Saved
                 </Link>
                 <Link to="/notifications" className="flex items-center text-gray-700">
                   <Bell className="h-5 w-5 mr-2" />
@@ -97,7 +97,7 @@ export const Navbar = () => {
             <div className="container mx-auto flex items-center">
               <input
                 type="text"
-                placeholder="Search for items, events, or services..."
+                placeholder="Search for food, events, dining halls..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-usm-gold focus:border-transparent"
                 autoFocus
               />

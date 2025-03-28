@@ -1,5 +1,5 @@
 
-import { Search } from 'lucide-react';
+import { Search, CalendarDays, Utensils } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const HeroSection = () => {
@@ -14,17 +14,28 @@ const HeroSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-12 animate-fade-in">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Find What You Need in the USM Community
+            Order Food & Discover Events at USM
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Buy, sell, and discover items, services, and events from fellow students at the University of Southern Mississippi.
+            The ultimate platform for Southern Miss students to order campus food, discover events, and connect with the USM community.
           </p>
+          
+          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 justify-center mb-8">
+            <Link to="/food" className="bg-usm-gold text-black px-6 py-4 rounded-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center justify-center">
+              <Utensils className="mr-2 h-5 w-5" />
+              Order Food
+            </Link>
+            <Link to="/events" className="bg-black text-white px-6 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all flex items-center justify-center">
+              <CalendarDays className="mr-2 h-5 w-5" />
+              Browse Events
+            </Link>
+          </div>
           
           <div className="max-w-2xl mx-auto relative">
             <div className="flex">
               <input 
                 type="text"
-                placeholder="What are you looking for?"
+                placeholder="Search for food, events, or venues..."
                 className="w-full px-6 py-4 rounded-l-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-usm-gold focus:border-transparent text-gray-800"
               />
               <button className="bg-usm-gold text-black px-6 py-4 rounded-r-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center">
@@ -34,30 +45,30 @@ const HeroSection = () => {
             </div>
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-sm text-gray-600">
               <span>Popular:</span>
-              <Link to="/category/textbooks" className="hover:text-usm-gold transition-colors">Textbooks</Link> •
-              <Link to="/category/furniture" className="hover:text-usm-gold transition-colors">Furniture</Link> •
-              <Link to="/category/electronics" className="hover:text-usm-gold transition-colors">Electronics</Link> •
-              <Link to="/category/tickets" className="hover:text-usm-gold transition-colors">Event Tickets</Link>
+              <Link to="/food/the-hub" className="hover:text-usm-gold transition-colors">The Hub</Link> •
+              <Link to="/food/fresh-food-company" className="hover:text-usm-gold transition-colors">Fresh Food Company</Link> •
+              <Link to="/food/chick-fil-a" className="hover:text-usm-gold transition-colors">Chick-fil-A</Link> •
+              <Link to="/events/homecoming" className="hover:text-usm-gold transition-colors">Homecoming</Link>
             </div>
           </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
           <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 text-center animate-zoom-in" style={{ animationDelay: '0.1s' }}>
-            <div className="text-2xl font-bold text-usm-gold mb-1">5,000+</div>
-            <div className="text-sm text-gray-600">Active Items</div>
+            <div className="text-2xl font-bold text-usm-gold mb-1">20+</div>
+            <div className="text-sm text-gray-600">Dining Options</div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 text-center animate-zoom-in" style={{ animationDelay: '0.2s' }}>
-            <div className="text-2xl font-bold text-usm-gold mb-1">2,500+</div>
-            <div className="text-sm text-gray-600">USM Students</div>
+            <div className="text-2xl font-bold text-usm-gold mb-1">100+</div>
+            <div className="text-sm text-gray-600">Weekly Events</div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 text-center animate-zoom-in" style={{ animationDelay: '0.3s' }}>
-            <div className="text-2xl font-bold text-usm-gold mb-1">100+</div>
-            <div className="text-sm text-gray-600">Daily Events</div>
+            <div className="text-2xl font-bold text-usm-gold mb-1">15k+</div>
+            <div className="text-sm text-gray-600">Happy Students</div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 text-center animate-zoom-in" style={{ animationDelay: '0.4s' }}>
-            <div className="text-2xl font-bold text-usm-gold mb-1">$0</div>
-            <div className="text-sm text-gray-600">Commission Fee</div>
+            <div className="text-2xl font-bold text-usm-gold mb-1">30min</div>
+            <div className="text-sm text-gray-600">Avg. Delivery Time</div>
           </div>
         </div>
       </div>
