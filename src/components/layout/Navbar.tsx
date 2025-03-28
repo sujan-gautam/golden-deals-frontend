@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -31,13 +30,11 @@ export const Navbar = () => {
     <header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-white/75 border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <Utensils className="h-6 w-6 text-usm-gold" />
             <span className="text-xl font-bold text-black">Eagle<span className="text-usm-gold">Dine</span></span>
           </Link>
           
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link to="/" className="text-gray-700 hover:text-usm-gold transition-colors">Home</Link>
             <Link to="/food" className="text-gray-700 hover:text-usm-gold transition-colors">Food</Link>
@@ -48,7 +45,6 @@ export const Navbar = () => {
             )}
           </nav>
           
-          {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
             <button 
               onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -84,15 +80,15 @@ export const Navbar = () => {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem as={Link} to="/profile">
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem as={Link} to="/saved">
+                    <DropdownMenuItem onClick={() => navigate('/saved')}>
                       <Heart className="mr-2 h-4 w-4" />
                       <span>Saved Items</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem as={Link} to="/marketplace/my-listings">
+                    <DropdownMenuItem onClick={() => navigate('/marketplace/my-listings')}>
                       <ShoppingBag className="mr-2 h-4 w-4" />
                       <span>My Listings</span>
                     </DropdownMenuItem>
@@ -116,7 +112,6 @@ export const Navbar = () => {
             )}
           </div>
           
-          {/* Mobile Menu Button */}
           <div className="flex md:hidden">
             <button
               className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none"
@@ -127,7 +122,6 @@ export const Navbar = () => {
           </div>
         </div>
         
-        {/* Mobile Navigation */}
         {isOpen && (
           <div className="md:hidden fixed inset-0 bg-white pt-16 z-40 animate-fade-in">
             <div className="flex flex-col space-y-4 p-6">
@@ -208,7 +202,6 @@ export const Navbar = () => {
           </div>
         )}
         
-        {/* Search Bar Expanded */}
         {isSearchOpen && (
           <div className="absolute top-16 left-0 right-0 bg-white shadow-md border-t border-gray-200 p-4 animate-fade-in">
             <div className="container mx-auto flex items-center">
