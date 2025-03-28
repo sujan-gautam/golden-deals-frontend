@@ -1,8 +1,36 @@
 
+import { useState } from 'react';
 import { Search, CalendarDays, Utensils } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/hooks/use-toast';
 
 const HeroSection = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    
+    if (!searchQuery.trim()) {
+      return;
+    }
+    
+    if (isAuthenticated) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to search for food and events",
+        variant: "default",
+      });
+      
+      // This would trigger the auth modal in a production app
+      document.getElementById('auth-button')?.click();
+    }
+  };
+  
   return (
     <section className="relative bg-gradient-to-b from-white to-gray-50 pt-16 pb-24 overflow-hidden">
       {/* Background Pattern */}
@@ -21,34 +49,39 @@ const HeroSection = () => {
           </p>
           
           <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 justify-center mb-8">
-            <Link to="/food" className="bg-usm-gold text-black px-6 py-4 rounded-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center justify-center">
+            <Link to={isAuthenticated ? "/food" : "/signin"} className="bg-usm-gold text-black px-6 py-4 rounded-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center justify-center">
               <Utensils className="mr-2 h-5 w-5" />
               Order Food
             </Link>
-            <Link to="/events" className="bg-black text-white px-6 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all flex items-center justify-center">
+            <Link to={isAuthenticated ? "/events" : "/signin"} className="bg-black text-white px-6 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all flex items-center justify-center">
               <CalendarDays className="mr-2 h-5 w-5" />
               Browse Events
             </Link>
           </div>
           
           <div className="max-w-2xl mx-auto relative">
-            <div className="flex">
+            <form onSubmit={handleSearch} className="flex">
               <input 
                 type="text"
                 placeholder="Search for food, events, or venues..."
                 className="w-full px-6 py-4 rounded-l-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-usm-gold focus:border-transparent text-gray-800"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button className="bg-usm-gold text-black px-6 py-4 rounded-r-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center">
+              <button 
+                type="submit"
+                className="bg-usm-gold text-black px-6 py-4 rounded-r-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center"
+              >
                 <Search className="mr-2 h-5 w-5" />
                 Search
               </button>
-            </div>
+            </form>
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-sm text-gray-600">
               <span>Popular:</span>
-              <Link to="/food/the-hub" className="hover:text-usm-gold transition-colors">The Hub</Link> •
-              <Link to="/food/fresh-food-company" className="hover:text-usm-gold transition-colors">Fresh Food Company</Link> •
-              <Link to="/food/chick-fil-a" className="hover:text-usm-gold transition-colors">Chick-fil-A</Link> •
-              <Link to="/events/homecoming" className="hover:text-usm-gold transition-colors">Homecoming</Link>
+              <Link to={isAuthenticated ? "/food/the-hub" : "/signin"} className="hover:text-usm-gold transition-colors">The Hub</Link> •
+              <Link to={isAuthenticated ? "/food/fresh-food-company" : "/signin"} className="hover:text-usm-gold transition-colors">Fresh Food Company</Link> •
+              <Link to={isAuthenticated ? "/food/chick-fil-a" : "/signin"} className="hover:text-usm-gold transition-colors">Chick-fil-A</Link> •
+              <Link to={isAuthenticated ? "/events/homecoming" : "/signin"} className="hover:text-usm-gold transition-colors">Homecoming</Link>
             </div>
           </div>
         </div>

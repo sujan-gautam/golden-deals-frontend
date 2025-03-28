@@ -1,11 +1,14 @@
-
-import React, { useState } from 'react';
-import { Utensils, CalendarDays, Clock, MapPin, Star, Coffee, Pizza, Sandwich, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Utensils, CalendarDays, Clock, MapPin, Star, Coffee, Pizza, Sandwich, CreditCard, Info } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/ui/HeroSection';
 import CategoryCard from '@/components/ui/CategoryCard';
 import AuthModal from '@/components/auth/AuthModal';
+import { useAuth } from '@/hooks/use-auth';
+import FeaturedSection from '@/components/ui/FeaturedSection';
 
 // Food categories for the campus dining section
 const foodCategories = [
@@ -15,79 +18,139 @@ const foodCategories = [
   { title: 'Grab & Go', icon: <Sandwich size={24} />, slug: 'grab-and-go', count: 8 },
 ];
 
-// Featured restaurants with sample data
-const featuredRestaurants = [
-  {
-    id: "1",
-    name: "The Fresh Food Company",
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    rating: 4.7,
-    deliveryTime: "15-25 min",
-    location: "Thad Cochran Center",
-    tags: ["Meal Plan", "Dine-in", "To-go"]
-  },
-  {
-    id: "2",
-    name: "Chick-fil-A",
-    image: "https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    rating: 4.9,
-    deliveryTime: "20-30 min",
-    location: "Thad Cochran Center",
-    tags: ["Popular", "Chicken", "Fast food"]
-  },
-  {
-    id: "3",
-    name: "Starbucks",
-    image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    rating: 4.5,
-    deliveryTime: "10-20 min",
-    location: "Cook Library",
-    tags: ["Coffee", "Breakfast", "Snacks"]
-  },
-  {
-    id: "4",
-    name: "Subway",
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    rating: 4.3,
-    deliveryTime: "15-25 min",
-    location: "Century Park",
-    tags: ["Sandwiches", "Healthy", "Meal Plan"]
-  }
-];
-
-// Upcoming events data
-const upcomingEvents = [
-  {
-    id: "1",
-    title: "Homecoming Game",
-    date: "Oct 15, 2023",
-    time: "6:00 PM",
-    location: "M.M. Roberts Stadium",
-    image: "https://images.unsplash.com/photo-1628891890467-b79f2c8ba7b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    category: "Sports"
-  },
-  {
-    id: "2",
-    title: "Student Organization Fair",
-    date: "Sep 8, 2023",
-    time: "11:00 AM - 2:00 PM",
-    location: "Shoemaker Square",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    category: "Campus"
-  },
-  {
-    id: "3",
-    title: "Career Fair",
-    date: "Oct 5, 2023",
-    time: "10:00 AM - 3:00 PM",
-    location: "Thad Cochran Center",
-    image: "https://images.unsplash.com/photo-1507537297725-24a1c029d3ca?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
-    category: "Career"
-  }
-];
-
 const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [loginReason, setLoginReason] = useState('');
+  const [featuredRestaurants, setFeaturedRestaurants] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    // Fetch restaurants data
+    const fetchRestaurants = async () => {
+      try {
+        // This would be a real API call in production
+        // For demo purposes, using a timeout to simulate API call
+        setTimeout(() => {
+          setFeaturedRestaurants([
+            {
+              id: "1",
+              name: "The Fresh Food Company",
+              image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              rating: 4.7,
+              deliveryTime: "15-25 min",
+              location: "Thad Cochran Center",
+              tags: ["Meal Plan", "Dine-in", "To-go"]
+            },
+            {
+              id: "2",
+              name: "Chick-fil-A",
+              image: "https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              rating: 4.9,
+              deliveryTime: "20-30 min",
+              location: "Thad Cochran Center",
+              tags: ["Popular", "Chicken", "Fast food"]
+            },
+            {
+              id: "3",
+              name: "Starbucks",
+              image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              rating: 4.5,
+              deliveryTime: "10-20 min",
+              location: "Cook Library",
+              tags: ["Coffee", "Breakfast", "Snacks"]
+            },
+            {
+              id: "4",
+              name: "Subway",
+              image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              rating: 4.3,
+              deliveryTime: "15-25 min",
+              location: "Century Park",
+              tags: ["Sandwiches", "Healthy", "Meal Plan"]
+            }
+          ]);
+        }, 1000);
+      } catch (error) {
+        console.error("Error fetching restaurants:", error);
+        toast({
+          title: "Error",
+          description: "Could not load restaurants data. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Fetch events data
+    const fetchEvents = async () => {
+      try {
+        // This would be a real API call in production
+        // For demo purposes, using a timeout to simulate API call
+        setTimeout(() => {
+          setUpcomingEvents([
+            {
+              id: "1",
+              title: "Homecoming Game",
+              date: "Oct 15, 2023",
+              time: "6:00 PM",
+              location: "M.M. Roberts Stadium",
+              image: "https://images.unsplash.com/photo-1628891890467-b79f2c8ba7b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              category: "Sports"
+            },
+            {
+              id: "2",
+              title: "Student Organization Fair",
+              date: "Sep 8, 2023",
+              time: "11:00 AM - 2:00 PM",
+              location: "Shoemaker Square",
+              image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              category: "Campus"
+            },
+            {
+              id: "3",
+              title: "Career Fair",
+              date: "Oct 5, 2023",
+              time: "10:00 AM - 3:00 PM",
+              location: "Thad Cochran Center",
+              image: "https://images.unsplash.com/photo-1507537297725-24a1c029d3ca?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=350&q=80",
+              category: "Career"
+            }
+          ]);
+          setIsLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        toast({
+          title: "Error",
+          description: "Could not load events data. Please try again later.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
+    };
+
+    fetchRestaurants();
+    fetchEvents();
+  }, [toast]);
+
+  const handleAuthAction = (action, reason) => {
+    if (isAuthenticated) {
+      if (action === 'rsvp') {
+        toast({
+          title: "Success",
+          description: "You've successfully RSVP'd to this event!",
+        });
+      } else {
+        navigate(`/${action}`);
+      }
+    } else {
+      setLoginReason(reason);
+      setIsAuthModalOpen(true);
+    }
+  };
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -122,43 +185,67 @@ const Index = () => {
             <div className="mt-16">
               <div className="flex justify-between items-center mb-8">
                 <h3 className="text-2xl font-bold text-gray-900">Popular Places to Eat</h3>
-                <a href="/food" className="text-usm-gold hover:text-usm-gold-dark font-medium">View All</a>
+                <button 
+                  onClick={() => handleAuthAction('food', 'to view all dining options')}
+                  className="text-usm-gold hover:text-usm-gold-dark font-medium"
+                >
+                  View All
+                </button>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {featuredRestaurants.map((restaurant) => (
-                  <div key={restaurant.id} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                    <div className="relative h-48 overflow-hidden">
-                      <img 
-                        src={restaurant.image} 
-                        alt={restaurant.name} 
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-md text-sm font-medium flex items-center">
-                        <Star className="h-4 w-4 text-usm-gold mr-1 fill-usm-gold" />
-                        {restaurant.rating}
+                {isLoading ? (
+                  [...Array(4)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 h-80 animate-pulse">
+                      <div className="h-48 bg-gray-200"></div>
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                       </div>
                     </div>
-                    <div className="p-4">
-                      <h4 className="font-bold text-gray-900 mb-1">{restaurant.name}</h4>
-                      <div className="flex items-center text-gray-600 text-sm mb-2">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {restaurant.location}
+                  ))
+                ) : (
+                  featuredRestaurants.map((restaurant) => (
+                    <div key={restaurant.id} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                      <div className="relative h-48 overflow-hidden">
+                        <img 
+                          src={restaurant.image} 
+                          alt={restaurant.name} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-md text-sm font-medium flex items-center">
+                          <Star className="h-4 w-4 text-usm-gold mr-1 fill-usm-gold" />
+                          {restaurant.rating}
+                        </div>
                       </div>
-                      <div className="flex items-center text-gray-600 text-sm mb-3">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {restaurant.deliveryTime}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {restaurant.tags.map((tag, index) => (
-                          <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
-                            {tag}
-                          </span>
-                        ))}
+                      <div className="p-4">
+                        <h4 className="font-bold text-gray-900 mb-1">{restaurant.name}</h4>
+                        <div className="flex items-center text-gray-600 text-sm mb-2">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {restaurant.location}
+                        </div>
+                        <div className="flex items-center text-gray-600 text-sm mb-3">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {restaurant.deliveryTime}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {restaurant.tags.map((tag, index) => (
+                            <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => handleAuthAction(`food/${restaurant.id}`, 'to order food')}
+                          className="w-full mt-3 text-center bg-usm-gold text-black font-medium py-2 px-4 rounded-md hover:bg-usm-gold-dark transition-colors"
+                        >
+                          Order Now
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -175,47 +262,75 @@ const Index = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                  <div className="relative h-48 overflow-hidden">
-                    <img 
-                      src={event.image} 
-                      alt={event.title} 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2 bg-usm-gold text-black px-2 py-1 rounded-md text-sm font-medium">
-                      {event.category}
+              {isLoading ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 h-96 animate-pulse">
+                    <div className="h-48 bg-gray-200"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/5"></div>
+                      <div className="h-10 bg-gray-200 rounded w-full"></div>
                     </div>
                   </div>
-                  <div className="p-4">
-                    <h4 className="font-bold text-gray-900 mb-2">{event.title}</h4>
-                    <div className="flex items-center text-gray-600 text-sm mb-2">
-                      <CalendarDays className="h-4 w-4 mr-1" />
-                      {event.date}
+                ))
+              ) : (
+                upcomingEvents.map((event) => (
+                  <div key={event.id} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                    <div className="relative h-48 overflow-hidden">
+                      <img 
+                        src={event.image} 
+                        alt={event.title} 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 right-2 bg-usm-gold text-black px-2 py-1 rounded-md text-sm font-medium">
+                        {event.category}
+                      </div>
                     </div>
-                    <div className="flex items-center text-gray-600 text-sm mb-2">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {event.time}
+                    <div className="p-4">
+                      <h4 className="font-bold text-gray-900 mb-2">{event.title}</h4>
+                      <div className="flex items-center text-gray-600 text-sm mb-2">
+                        <CalendarDays className="h-4 w-4 mr-1" />
+                        {event.date}
+                      </div>
+                      <div className="flex items-center text-gray-600 text-sm mb-2">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {event.time}
+                      </div>
+                      <div className="flex items-center text-gray-600 text-sm mb-3">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {event.location}
+                      </div>
+                      <button 
+                        onClick={() => handleAuthAction('rsvp', 'to RSVP for this event')} 
+                        className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors"
+                      >
+                        RSVP Now
+                      </button>
                     </div>
-                    <div className="flex items-center text-gray-600 text-sm mb-3">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {event.location}
-                    </div>
-                    <button className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors">
-                      RSVP Now
-                    </button>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
             
             <div className="text-center mt-8">
-              <a href="/events" className="inline-block bg-usm-gold text-black font-medium px-6 py-3 rounded-lg hover:bg-usm-gold-dark transition-colors">
+              <button 
+                onClick={() => handleAuthAction('events', 'to view all events')}
+                className="inline-block bg-usm-gold text-black font-medium px-6 py-3 rounded-lg hover:bg-usm-gold-dark transition-colors"
+              >
                 View All Events
-              </a>
+              </button>
             </div>
           </div>
         </section>
+        
+        {/* Marketplace Section */}
+        <FeaturedSection 
+          title="Student Marketplace" 
+          subtitle="Buy and sell items from fellow students" 
+          moreLink="/marketplace"
+        />
         
         {/* How It Works Section */}
         <section className="py-16 bg-white">
@@ -257,6 +372,19 @@ const Index = () => {
                   Use your student meal plan, Eagle Bucks, or credit card for a seamless payment.
                 </p>
               </div>
+            </div>
+            
+            <div className="text-center mt-12">
+              <p className="text-gray-500 mb-3">
+                <Info className="h-4 w-4 inline-block mr-1" />
+                Login required for ordering food, RSVPing to events, and accessing the marketplace
+              </p>
+              <button 
+                onClick={() => setIsAuthModalOpen(true)}
+                className="bg-usm-gold text-black font-medium px-6 py-3 rounded-lg hover:bg-usm-gold-dark transition-colors"
+              >
+                Sign In to Get Started
+              </button>
             </div>
           </div>
         </section>
@@ -313,6 +441,7 @@ const Index = () => {
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
+        message={loginReason ? `Please sign in ${loginReason}` : undefined}
       />
     </div>
   );
