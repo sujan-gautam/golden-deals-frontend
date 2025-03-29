@@ -18,7 +18,7 @@ export const usePosts = () => {
     isLoading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<Post[]>({
     queryKey: ['posts'],
     queryFn: async () => {
       try {
@@ -39,7 +39,7 @@ export const usePosts = () => {
   });
 
   // Store posts in localStorage whenever they change
-  const storePostsLocally = useCallback((newPosts) => {
+  const storePostsLocally = useCallback((newPosts: Post[]) => {
     try {
       localStorage.setItem('posts', JSON.stringify(newPosts));
     } catch (err) {
@@ -60,7 +60,7 @@ export const usePosts = () => {
       await queryClient.cancelQueries({ queryKey: ['posts'] });
       
       // Snapshot the previous value
-      const previousPosts = queryClient.getQueryData(['posts']) || [];
+      const previousPosts = queryClient.getQueryData<Post[]>(['posts']) || [];
       
       // Create temporary post with local ID
       const tempPost = {
@@ -86,7 +86,7 @@ export const usePosts = () => {
     },
     onSuccess: (newPost, _, context) => {
       // Update cache with the actual post from server
-      const currentPosts = queryClient.getQueryData(['posts']) || [];
+      const currentPosts = queryClient.getQueryData<Post[]>(['posts']) || [];
       
       // Replace temp post with actual post
       const updatedPosts = currentPosts.map((post: Post) => 
@@ -128,10 +128,10 @@ export const usePosts = () => {
       await queryClient.cancelQueries({ queryKey: ['posts'] });
       
       // Snapshot the previous value
-      const previousPosts = queryClient.getQueryData(['posts']);
+      const previousPosts = queryClient.getQueryData<Post[]>(['posts']);
       
       // Optimistically update to the new value
-      queryClient.setQueryData(['posts'], (old: any) => {
+      queryClient.setQueryData<Post[]>(['posts'], (old = []) => {
         const updatedPosts = old.map((post: Post) => {
           if (post._id?.toString() === postId) {
             const likes = Array.isArray(post.likes) ? [...post.likes] : [];
@@ -181,10 +181,10 @@ export const usePosts = () => {
       await queryClient.cancelQueries({ queryKey: ['posts'] });
       
       // Snapshot the previous value
-      const previousPosts = queryClient.getQueryData(['posts']);
+      const previousPosts = queryClient.getQueryData<Post[]>(['posts']);
       
       // Optimistically update to the new value
-      queryClient.setQueryData(['posts'], (old: any) => {
+      queryClient.setQueryData<Post[]>(['posts'], (old = []) => {
         const updatedPosts = old.map((post: Post) => {
           if (post._id?.toString() === postId) {
             return {
