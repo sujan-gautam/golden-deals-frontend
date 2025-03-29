@@ -137,14 +137,28 @@ export const likePost = async (postId: string) => {
 };
 
 export const commentOnPost = async (postId: string, content: string) => {
-  return fetchAPI(`posts/${postId}/comments`, {
-    method: 'POST',
-    body: JSON.stringify({ content }),
-  });
+  try {
+    const result = await fetchAPI(`posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+    return result;
+  } catch (error) {
+    console.error('Error posting comment:', error);
+    // Fall back to local comments if API fails
+    return commentLocalPost(postId, content);
+  }
 };
 
 export const getComments = async (postId: string) => {
-  return fetchAPI(`posts/${postId}/comments`);
+  try {
+    const result = await fetchAPI(`posts/${postId}/comments`);
+    return result;
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    // Fall back to local comments if API fails
+    return getLocalComments(postId);
+  }
 };
 
 export const markInterestedInEvent = async (eventId: string) => {
@@ -324,8 +338,32 @@ const likeLocalPost = (postId: string) => {
 
 const getLocalComments = (postId: string) => {
   try {
+    // Try to get comments from localStorage
     const commentsJson = localStorage.getItem(`comments_${postId}`);
-    return commentsJson ? JSON.parse(commentsJson) : [];
+    const comments = commentsJson ? JSON.parse(commentsJson) : [];
+    
+    // Get the current user
+    const user = authService.getCurrentUser();
+    
+    // For each comment, check if it's liked by the current user
+    return comments.map((comment: any) => {
+      // Set up the proper user reference
+      const commentUser = comment.user || {
+        _id: comment.userId,
+        name: 'Unknown User',
+        avatar: 'https://i.pravatar.cc/300',
+      };
+      
+      // Check if the current user has liked the comment
+      const likes = Array.isArray(comment.likes) ? comment.likes : [];
+      const isLiked = user && likes.includes(user._id);
+      
+      return {
+        ...comment,
+        user: commentUser,
+        liked: isLiked
+      };
+    });
   } catch (error) {
     console.error('Error getting comments from localStorage', error);
     return [];

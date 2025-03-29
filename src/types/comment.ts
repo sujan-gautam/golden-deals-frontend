@@ -1,16 +1,15 @@
 
 import { Types } from 'mongoose';
+import { User } from './user';
 
 export interface Comment {
-  _id?: string | Types.ObjectId;
-  postId: string;
-  userId: string;
-  user: {
-    _id: string;
-    name: string;
-    avatar: string;
-  };
+  _id: string | Types.ObjectId;
+  postId: string | Types.ObjectId;
+  userId: string | Types.ObjectId;
   content: string;
+  likes: (string | Types.ObjectId)[];
+  parentId?: string | Types.ObjectId | null;
   createdAt: string;
-  likes: string[]; // array of user IDs who liked the comment
+  user?: User;
+  replies?: Comment[];
 }

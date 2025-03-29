@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getComments } from '@/services/api';
+import { idToString } from '@/types/post';
 
 interface Comment {
   id: string;
@@ -39,9 +41,42 @@ const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsPr
   const [showReplies, setShowReplies] = useState<Record<string, boolean>>({});
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+  useEffect(() => {
+    const fetchComments = async () => {
+      if (initialComments.length === 0) {
+        setIsLoading(true);
+        try {
+          const fetchedComments = await getComments(postId);
+          const formattedComments = fetchedComments.map((comment: any) => ({
+            id: idToString(comment._id),
+            user: {
+              id: idToString(comment.user?._id || comment.userId),
+              name: comment.user?.name || 'Unknown User',
+              avatar: comment.user?.avatar || 'https://i.pravatar.cc/300',
+            },
+            content: comment.content,
+            likes: Array.isArray(comment.likes) ? comment.likes.length : 0,
+            liked: Array.isArray(comment.likes) && currentUser._id ? 
+              comment.likes.includes(currentUser._id) : false,
+            createdAt: comment.createdAt,
+            replies: comment.replies || [],
+          }));
+          setComments(formattedComments);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchComments();
+  }, [postId, initialComments]);
 
   const formatTimeAgo = (dateString: string) => {
     try {
@@ -56,35 +91,31 @@ const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsPr
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      const newCommentObj: Comment = {
-        id: Date.now().toString(),
-        user: {
-          id: currentUser.id || 'current-user',
-          name: currentUser.name || 'You',
-          avatar: currentUser.avatar || 'https://i.pravatar.cc/300?img=8',
-        },
-        content: newComment,
-        likes: 0,
-        liked: false,
-        createdAt: new Date().toISOString(),
-        replies: [],
-      };
-      
-      setComments([...comments, newCommentObj]);
-      setNewComment('');
-      setIsSubmitting(false);
-      toast({
-        title: "Comment added",
-        description: "Your comment has been posted successfully.",
-      });
-      
-      // Call the onComment prop if provided
-      if (onComment) {
-        onComment(newComment);
-      }
-    }, 500);
+    if (onComment) {
+      onComment(newComment);
+    }
+    
+    const newCommentObj: Comment = {
+      id: `local-comment-${Date.now()}`,
+      user: {
+        id: currentUser._id || 'current-user',
+        name: currentUser.name || 'You',
+        avatar: currentUser.avatar || 'https://i.pravatar.cc/300?img=8',
+      },
+      content: newComment,
+      likes: 0,
+      liked: false,
+      createdAt: new Date().toISOString(),
+      replies: [],
+    };
+    
+    setComments([...comments, newCommentObj]);
+    setNewComment('');
+    setIsSubmitting(false);
+    toast({
+      title: "Comment added",
+      description: "Your comment has been posted successfully.",
+    });
   };
 
   const handleAddReply = (commentId: string) => {
@@ -93,12 +124,11 @@ const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsPr
     
     setIsSubmitting(true);
     
-    // Simulate API call
     setTimeout(() => {
       const newReply: Comment = {
-        id: Date.now().toString(),
+        id: `local-reply-${Date.now()}`,
         user: {
-          id: currentUser.id || 'current-user',
+          id: currentUser._id || 'current-user',
           name: currentUser.name || 'You',
           avatar: currentUser.avatar || 'https://i.pravatar.cc/300?img=8',
         },
@@ -138,7 +168,6 @@ const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsPr
         };
       }
       
-      // Check if comment is in replies
       if (comment.replies) {
         return {
           ...comment,
@@ -310,10 +339,157 @@ const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsPr
         </div>
       </div>
       
-      {comments.length > 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-4">
+          <div className="animate-pulse flex space-x-3">
+            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 bg-gray-200 rounded w-full max-w-md"></div>
+            </div>
+          </div>
+        </div>
+      ) : comments.length > 0 ? (
         <div className="space-y-4">
           {comments.map(comment => (
-            <CommentItem key={comment.id} comment={comment} />
+            <div key={comment.id} className="flex space-x-3 mb-4">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
+                <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
+                  <div className="font-medium text-sm">{comment.user.name}</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</p>
+                </div>
+                
+                <div className="flex items-center text-xs text-gray-500 mt-1 space-x-3">
+                  <span>{formatTimeAgo(comment.createdAt)}</span>
+                  
+                  <button 
+                    onClick={() => toggleLike(comment.id)}
+                    className={`font-medium ${comment.liked ? 'text-red-500' : ''}`}
+                  >
+                    {comment.likes > 0 ? `${comment.likes} Likes` : 'Like'}
+                  </button>
+                  
+                  <button 
+                    className="font-medium"
+                    onClick={() => toggleReplies(comment.id)}
+                  >
+                    Reply
+                  </button>
+                </div>
+                
+                {comment.replies && comment.replies.length > 0 && (
+                  <button 
+                    className="text-xs text-primary font-medium mt-1"
+                    onClick={() => toggleReplies(comment.id)}
+                  >
+                    {showReplies[comment.id] 
+                      ? `Hide ${comment.replies.length} ${comment.replies.length === 1 ? 'reply' : 'replies'}`
+                      : `View ${comment.replies.length} ${comment.replies.length === 1 ? 'reply' : 'replies'}`}
+                  </button>
+                )}
+                
+                {showReplies[comment.id] && (
+                  <div className="mt-2">
+                    {comment.replies?.map(reply => (
+                      <div key={reply.id} className="flex space-x-3 ml-12 mt-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={reply.user.avatar} alt={reply.user.name} />
+                          <AvatarFallback>{reply.user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1">
+                          <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
+                            <div className="font-medium text-sm">{reply.user.name}</div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{reply.content}</p>
+                          </div>
+                          
+                          <div className="flex items-center text-xs text-gray-500 mt-1 space-x-3">
+                            <span>{formatTimeAgo(reply.createdAt)}</span>
+                            
+                            <button 
+                              onClick={() => toggleLike(reply.id)}
+                              className={`font-medium ${reply.liked ? 'text-red-500' : ''}`}
+                            >
+                              {reply.likes > 0 ? `${reply.likes} Likes` : 'Like'}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => toggleLike(reply.id)}>
+                              {reply.liked ? 'Unlike' : 'Like'}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600">Report</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ))}
+                    
+                    <div className="flex items-center mt-3 ml-12">
+                      <Avatar className="h-7 w-7 mr-2">
+                        <AvatarImage src={currentUser.avatar} />
+                        <AvatarFallback>U</AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          placeholder="Write a reply..."
+                          className="w-full py-1.5 px-3 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-primary pr-8"
+                          value={replyText[comment.id] || ''}
+                          onChange={(e) => setReplyText({...replyText, [comment.id]: e.target.value})}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleAddReply(comment.id);
+                            }
+                          }}
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                          onClick={() => handleAddReply(comment.id)}
+                          disabled={isSubmitting || !replyText[comment.id]?.trim()}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toggleLike(comment.id)}>
+                    {comment.liked ? 'Unlike' : 'Like'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toggleReplies(comment.id)}>
+                    Reply
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600">Report</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
         </div>
       ) : (
