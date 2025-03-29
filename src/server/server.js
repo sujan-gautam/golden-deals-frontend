@@ -13,16 +13,36 @@ const authRoutes = require('./routes/auth');
 const app = express();
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: '*', // Allow all origins for now (adjust in production)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '50mb' }));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/usm_app')
-  .then(() => console.log('MongoDB Connected'))
-  .catch(err => {
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/usm_app');
+    console.log('MongoDB Connected');
+  } catch (err) {
     console.error('MongoDB Connection Error:', err);
-    process.exit(1);
-  });
+    // Retry connection after 5 seconds
+    setTimeout(connectDB, 5000);
+  }
+};
+
+connectDB();
+
+// Error handling for MongoDB connection
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected, attempting to reconnect...');
+  connectDB();
+});
 
 // API Routes
 app.use('/api/posts', postsRoutes);

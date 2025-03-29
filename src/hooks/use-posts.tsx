@@ -1,11 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Post } from '../types/post';
 import { getPosts, createPost, likePost, commentOnPost } from '../services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from './use-auth';
-import RequireAuth from '@/components/auth/RequireAuth';
 
 export const usePosts = () => {
   const { toast } = useToast();
@@ -13,7 +12,7 @@ export const usePosts = () => {
   const queryClient = useQueryClient();
   const [isCreatingPost, setIsCreatingPost] = useState(false);
 
-  // Fetch posts
+  // Fetch posts with error handling and fallback to local storage
   const {
     data: posts = [],
     isLoading,
@@ -21,28 +20,103 @@ export const usePosts = () => {
     refetch
   } = useQuery({
     queryKey: ['posts'],
-    queryFn: getPosts,
+    queryFn: async () => {
+      try {
+        return await getPosts();
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        // If API fails, try to get from localStorage
+        const localPosts = localStorage.getItem('posts');
+        if (localPosts) {
+          return JSON.parse(localPosts);
+        }
+        throw error;
+      }
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true,
+    retry: 2,
   });
+
+  // Store posts in localStorage whenever they change
+  const storePostsLocally = useCallback((newPosts) => {
+    try {
+      localStorage.setItem('posts', JSON.stringify(newPosts));
+    } catch (err) {
+      console.error('Error storing posts locally:', err);
+    }
+  }, []);
+
+  // If we have posts, store them locally
+  if (posts && posts.length > 0) {
+    storePostsLocally(posts);
+  }
 
   // Create post mutation
   const createPostMutation = useMutation({
     mutationFn: createPost,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    onMutate: async (newPost) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData(['posts']) || [];
+      
+      // Create temporary post with local ID
+      const tempPost = {
+        ...newPost,
+        _id: `temp-${Date.now()}`,
+        userId: user?._id || '',
+        user: {
+          _id: user?._id || '',
+          name: user?.name || '',
+          avatar: user?.avatar || '',
+        },
+        likes: [],
+        comments: 0,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Optimistically update the cache
+      const updatedPosts = [tempPost, ...previousPosts];
+      queryClient.setQueryData(['posts'], updatedPosts);
+      storePostsLocally(updatedPosts);
+      
+      return { previousPosts };
+    },
+    onSuccess: (newPost, _, context) => {
+      // Update cache with the actual post from server
+      const currentPosts = queryClient.getQueryData(['posts']) || [];
+      
+      // Replace temp post with actual post
+      const updatedPosts = currentPosts.map((post: Post) => 
+        post._id?.toString().startsWith('temp-') ? newPost : post
+      );
+      
+      queryClient.setQueryData(['posts'], updatedPosts);
+      storePostsLocally(updatedPosts);
+      
       toast({
         title: "Post created",
         description: "Your post has been published successfully.",
       });
       setIsCreatingPost(false);
     },
-    onError: (error: any) => {
+    onError: (error: any, _, context) => {
+      // Revert to previous posts on error
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['posts'], context.previousPosts);
+      }
+      
       toast({
         title: "Error creating post",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always invalidate to ensure data is fresh
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 
@@ -58,7 +132,7 @@ export const usePosts = () => {
       
       // Optimistically update to the new value
       queryClient.setQueryData(['posts'], (old: any) => {
-        return old.map((post: Post) => {
+        const updatedPosts = old.map((post: Post) => {
           if (post._id?.toString() === postId) {
             const likes = Array.isArray(post.likes) ? [...post.likes] : [];
             const userId = user?._id as string;
@@ -73,6 +147,9 @@ export const usePosts = () => {
           }
           return post;
         });
+        
+        storePostsLocally(updatedPosts);
+        return updatedPosts;
       });
       
       return { previousPosts };
@@ -99,19 +176,51 @@ export const usePosts = () => {
   const commentPostMutation = useMutation({
     mutationFn: ({ postId, content }: { postId: string; content: string }) => 
       commentOnPost(postId, content),
+    onMutate: async ({ postId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData(['posts']);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['posts'], (old: any) => {
+        const updatedPosts = old.map((post: Post) => {
+          if (post._id?.toString() === postId) {
+            return {
+              ...post,
+              comments: (post.comments || 0) + 1
+            };
+          }
+          return post;
+        });
+        
+        storePostsLocally(updatedPosts);
+        return updatedPosts;
+      });
+      
+      return { previousPosts };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({
         title: "Comment added",
         description: "Your comment has been added successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, _, context) => {
+      // Rollback to the previous value
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['posts'], context.previousPosts);
+      }
+      
       toast({
         title: "Error",
         description: error.message || "Failed to add comment",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 

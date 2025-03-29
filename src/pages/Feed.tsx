@@ -1,7 +1,6 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SocialLayout from "@/components/layout/SocialLayout";
 import CreatePostModal from "@/components/social/CreatePostModal";
@@ -13,144 +12,23 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { ImageIcon, ShoppingBag, Calendar } from "lucide-react";
-import { Post } from "@/types/post";
+import { usePosts } from "@/hooks/use-posts";
 import { useAuth } from "@/hooks/use-auth";
-import { getPosts, createPost, likePost, commentOnPost } from "@/services/api";
 
 const Feed = () => {
-  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const data = await getPosts();
-        setPosts(data || []); // Ensure we have an array even if data is undefined
-      } catch (err: any) {
-        toast({
-          title: "Error",
-          description: err.message || "Failed to load posts",
-          variant: "destructive",
-        });
-        setPosts([]); // Set empty array on error to prevent crashes
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchPosts();
-  }, [toast]);
-
-  const handleLikePost = async (postId: string) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to like posts",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      await likePost(postId);
-      
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          if (post._id?.toString() === postId) {
-            // Ensure post.likes is an array before checking includes
-            const likes = Array.isArray(post.likes) ? post.likes : [];
-            const userId = user?._id as string;
-            const currentUserLiked = likes.includes(userId);
-            
-            return {
-              ...post,
-              likes: currentUserLiked
-                ? likes.filter(id => id !== userId)
-                : [...likes, userId]
-            };
-          }
-          return post;
-        })
-      );
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to like post",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCreatePost = async (newPostData: any) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to create posts",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const newPost = await createPost(newPostData);
-      setPosts([newPost, ...posts]);
-      setIsCreatePostOpen(false);
-      
-      toast({
-        title: "Post created!",
-        description: "Your post has been published.",
-      });
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to create post",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleComment = async (postId: string, content: string) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to comment",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      await commentOnPost(postId, content);
-      
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          if (post._id?.toString() === postId) {
-            return {
-              ...post,
-              comments: post.comments + 1
-            };
-          }
-          return post;
-        })
-      );
-      
-      toast({
-        title: "Comment added",
-        description: "Your comment has been added to the post.",
-      });
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to add comment",
-        variant: "destructive",
-      });
-    }
-  };
-
+  const {
+    posts,
+    isLoading,
+    handleLikePost,
+    handleCommentOnPost,
+    handleCreatePost,
+    isCreatingPost,
+    setIsCreatingPost
+  } = usePosts();
+  
   const filteredPosts = activeTab === "all" 
     ? posts 
     : posts.filter(post => post.type === activeTab);
@@ -168,7 +46,7 @@ const Feed = () => {
             <Button
               variant="outline"
               className="flex-grow text-left justify-start text-gray-500 font-normal h-11"
-              onClick={() => setIsCreatePostOpen(true)}
+              onClick={() => setIsCreatingPost(true)}
             >
               What's on your mind?
             </Button>
@@ -177,7 +55,7 @@ const Feed = () => {
             <Button
               variant="ghost"
               className="flex-1 text-gray-500"
-              onClick={() => setIsCreatePostOpen(true)}
+              onClick={() => setIsCreatingPost(true)}
             >
               <ImageIcon className="mr-2 h-5 w-5" />
               Photo
@@ -185,7 +63,7 @@ const Feed = () => {
             <Button
               variant="ghost"
               className="flex-1 text-gray-500"
-              onClick={() => setIsCreatePostOpen(true)}
+              onClick={() => setIsCreatingPost(true)}
             >
               <ShoppingBag className="mr-2 h-5 w-5" />
               Product
@@ -193,7 +71,7 @@ const Feed = () => {
             <Button
               variant="ghost"
               className="flex-1 text-gray-500"
-              onClick={() => setIsCreatePostOpen(true)}
+              onClick={() => setIsCreatingPost(true)}
             >
               <Calendar className="mr-2 h-5 w-5" />
               Event
@@ -214,18 +92,20 @@ const Feed = () => {
         {/* Posts Feed */}
         {isLoading ? (
           <div className="space-y-4">
-            <div className="bg-white rounded-xl shadow animate-pulse">
-              <div className="p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-xl shadow animate-pulse">
+                <div className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                    </div>
                   </div>
+                  <div className="mt-4 h-24 bg-gray-200 rounded"></div>
                 </div>
-                <div className="mt-4 h-24 bg-gray-200 rounded"></div>
               </div>
-            </div>
+            ))}
           </div>
         ) : (
           <>
@@ -241,7 +121,7 @@ const Feed = () => {
                   onLike={() => handleLikePost(post._id as string)}
                   onComment={(content) => {
                     if (content) {
-                      handleComment(post._id as string, content);
+                      handleCommentOnPost(post._id as string, content);
                     }
                   }}
                   currentUser={user}
@@ -258,8 +138,8 @@ const Feed = () => {
       </div>
 
       <CreatePostModal
-        isOpen={isCreatePostOpen}
-        onClose={() => setIsCreatePostOpen(false)}
+        isOpen={isCreatingPost}
+        onClose={() => setIsCreatingPost(false)}
         onSubmit={handleCreatePost}
       />
     </SocialLayout>
