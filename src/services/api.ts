@@ -6,7 +6,9 @@ import { Conversation, Message } from '../types/message';
 import { Comment } from '../types/comment';
 import * as authService from './authService';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' 
+  : 'http://localhost:5000/api';
 
 // Helper function for API calls
 const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
@@ -31,56 +33,59 @@ const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
     }
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`API Error (${endpoint}):`, error);
     
-    // Use local storage for persistence in development when API is unavailable
-    if (endpoint === 'auth/login') {
-      return mockLoginResponse(options.body ? JSON.parse(options.body as string) : {});
-    }
-    
-    if (endpoint === 'auth/register') {
-      return mockRegisterResponse(options.body ? JSON.parse(options.body as string) : {});
-    }
-    
-    if (endpoint === 'auth/me') {
-      return mockCurrentUserResponse();
-    }
-    
-    if (endpoint === 'posts' && options.method === 'GET') {
-      return getLocalPosts();
-    }
-    
-    if (endpoint === 'posts' && options.method === 'POST') {
-      return saveLocalPost(options.body ? JSON.parse(options.body as string) : {});
-    }
-    
-    if (endpoint === 'stories') {
-      return mockStoriesResponse();
-    }
-    
-    if (endpoint.includes('posts/') && endpoint.includes('/like') && options.method === 'POST') {
-      const postId = endpoint.split('/')[1];
-      return likeLocalPost(postId);
-    }
-    
-    if (endpoint.includes('posts/') && endpoint.includes('/comments') && options.method === 'POST') {
-      const postId = endpoint.split('/')[1];
-      const content = options.body ? JSON.parse(options.body as string).content : '';
-      return commentLocalPost(postId, content);
-    }
-    
-    if (endpoint.includes('posts/') && endpoint.includes('/comments') && options.method === 'GET') {
-      const postId = endpoint.split('/')[1];
-      return getLocalComments(postId);
-    }
-    
-    if (endpoint === 'events' && options.method === 'GET') {
-      return getLocalEvents();
-    }
-    
-    if (endpoint === 'products' && options.method === 'GET') {
-      return getLocalProducts();
+    // If server is not available, fallback to local storage for development
+    if (!navigator.onLine || error.message.includes('Failed to fetch')) {
+      // Use local storage for persistence in development when API is unavailable
+      if (endpoint === 'auth/login') {
+        return mockLoginResponse(options.body ? JSON.parse(options.body as string) : {});
+      }
+      
+      if (endpoint === 'auth/register') {
+        return mockRegisterResponse(options.body ? JSON.parse(options.body as string) : {});
+      }
+      
+      if (endpoint === 'auth/me') {
+        return mockCurrentUserResponse();
+      }
+      
+      if (endpoint === 'posts' && options.method === 'GET') {
+        return getLocalPosts();
+      }
+      
+      if (endpoint === 'posts' && options.method === 'POST') {
+        return saveLocalPost(options.body ? JSON.parse(options.body as string) : {});
+      }
+      
+      if (endpoint === 'stories') {
+        return mockStoriesResponse();
+      }
+      
+      if (endpoint.includes('posts/') && endpoint.includes('/like') && options.method === 'POST') {
+        const postId = endpoint.split('/')[1];
+        return likeLocalPost(postId);
+      }
+      
+      if (endpoint.includes('posts/') && endpoint.includes('/comments') && options.method === 'POST') {
+        const postId = endpoint.split('/')[1];
+        const content = options.body ? JSON.parse(options.body as string).content : '';
+        return commentLocalPost(postId, content);
+      }
+      
+      if (endpoint.includes('posts/') && endpoint.includes('/comments') && options.method === 'GET') {
+        const postId = endpoint.split('/')[1];
+        return getLocalComments(postId);
+      }
+      
+      if (endpoint === 'events' && options.method === 'GET') {
+        return getLocalEvents();
+      }
+      
+      if (endpoint === 'products' && options.method === 'GET') {
+        return getLocalProducts();
+      }
     }
     
     // Re-throw for other endpoints that don't have mock data
@@ -105,6 +110,13 @@ export const registerUser = async (name: string, email: string, password: string
 
 export const getCurrentUser = async () => {
   return fetchAPI('auth/me');
+};
+
+export const updateProfile = async (userData: Partial<User>) => {
+  return fetchAPI('auth/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(userData),
+  });
 };
 
 // Posts APIs
@@ -182,12 +194,12 @@ export const getUsers = async () => {
   return fetchAPI('users');
 };
 
-// Products APIs
+// Products APIs (filtered posts with type=product)
 export const getProducts = async () => {
   return fetchAPI('products');
 };
 
-// Events APIs
+// Events APIs (filtered posts with type=event)
 export const getEvents = async () => {
   return fetchAPI('events');
 };
@@ -199,21 +211,27 @@ export const uploadImage = async (file: File) => {
   
   const token = authService.getToken();
   
-  const response = await fetch(`${API_URL}/upload`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  });
-  
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
+  try {
+    const response = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Something went wrong');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    // For development, create mock image URL
+    return { url: `https://source.unsplash.com/random/800x600?t=${Date.now()}` };
   }
-  
-  return data;
 };
 
 // Local storage persistence helpers

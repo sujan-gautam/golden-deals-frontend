@@ -5,10 +5,11 @@ import { Post } from '../types/post';
 import { getPosts, createPost, likePost, commentOnPost } from '../services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from './use-auth';
+import RequireAuth from '@/components/auth/RequireAuth';
 
 export const usePosts = () => {
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
   const [isCreatingPost, setIsCreatingPost] = useState(false);
 
@@ -21,6 +22,8 @@ export const usePosts = () => {
   } = useQuery({
     queryKey: ['posts'],
     queryFn: getPosts,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
   });
 
   // Create post mutation
@@ -46,15 +49,49 @@ export const usePosts = () => {
   // Like post mutation
   const likePostMutation = useMutation({
     mutationFn: likePost,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    onMutate: async (postId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData(['posts']);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['posts'], (old: any) => {
+        return old.map((post: Post) => {
+          if (post._id?.toString() === postId) {
+            const likes = Array.isArray(post.likes) ? [...post.likes] : [];
+            const userId = user?._id as string;
+            const alreadyLiked = likes.includes(userId);
+            
+            return {
+              ...post,
+              likes: alreadyLiked 
+                ? likes.filter(id => id !== userId) 
+                : [...likes, userId]
+            };
+          }
+          return post;
+        });
+      });
+      
+      return { previousPosts };
     },
-    onError: (error: any) => {
+    onError: (error: any, _postId, context) => {
+      // Rollback to the previous value
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['posts'], context.previousPosts);
+      }
+      
       toast({
         title: "Error",
         description: error.message || "Failed to like post",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to make sure our local data is in sync with server
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 
