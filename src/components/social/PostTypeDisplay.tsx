@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,7 @@ import BrandedLikeButton from './BrandedLikeButton';
 import CommentsSection from './CommentsSection';
 import MessageSellerModal from './MessageSellerModal';
 import { formatDistance } from 'date-fns';
-import { Post, ProductPost as ProductPostType, EventPost as EventPostType } from '@/types/post';
+import { Post, ProductPost as ProductPostType, EventPost as EventPostType, idToString } from '@/types/post';
 import { User } from '@/types/user';
 
 interface PostWithLiked extends Omit<Post, 'likes'> {
@@ -50,7 +49,8 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
   const { toast } = useToast();
   
   const handleShare = () => {
-    navigator.clipboard.writeText(window.location.origin + '/post/' + post._id)
+    const postIdString = idToString(post._id);
+    navigator.clipboard.writeText(window.location.origin + '/post/' + postIdString)
       .then(() => {
         toast({
           title: "Link copied!",
@@ -74,11 +74,9 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
     }
   };
   
-  // Generic post view
   if (post.type === 'post') {
     return (
       <Card className="mb-6 overflow-hidden">
-        {/* Post Header with User Info */}
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
@@ -86,7 +84,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
-              <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
+              <Link to={`/profile/${idToString(post.user._id)}`} className="font-medium text-gray-900 hover:underline">
                 {post.user.name}
               </Link>
               <div className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</div>
@@ -107,12 +105,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </DropdownMenu>
         </div>
         
-        {/* Post Content */}
         <div className="px-4 pb-3">
           <p className="text-gray-800 whitespace-pre-line">{post.content}</p>
         </div>
         
-        {/* Post Image (if any) */}
         {post.image && (
           <div className="aspect-video bg-gray-100">
             <img
@@ -123,13 +119,11 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </div>
         )}
         
-        {/* Like & Comment Counts */}
         <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
           <div>{post.likes} likes</div>
           <div>{post.comments} comments</div>
         </div>
         
-        {/* Action Buttons */}
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
           <BrandedLikeButton 
             onLike={onLike} 
@@ -154,11 +148,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </Button>
         </div>
         
-        {/* Comments Section (expandable) */}
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
-              postId={post._id?.toString() || ''}
+              postId={idToString(post._id)}
               initialComments={[]}
               onComment={onComment}
             />
@@ -168,12 +161,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
     );
   }
   
-  // Product listing view
   if (post.type === 'product') {
     const productPost = post as ProductPost;
     return (
       <Card className="mb-6 overflow-hidden">
-        {/* Product Header with User Info and Product Badge */}
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
@@ -182,7 +173,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
             </Avatar>
             <div>
               <div className="flex items-center">
-                <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
+                <Link to={`/profile/${idToString(post.user._id)}`} className="font-medium text-gray-900 hover:underline">
                   {post.user.name}
                 </Link>
                 <Badge variant="outline" className="ml-2 bg-usm-gold text-black">
@@ -208,7 +199,6 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </DropdownMenu>
         </div>
         
-        {/* Product Image */}
         {post.image && (
           <div className="aspect-video bg-gray-100">
             <img
@@ -219,7 +209,6 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </div>
         )}
         
-        {/* Product Details */}
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-xl font-semibold text-gray-900">{productPost.productName}</h3>
@@ -262,13 +251,11 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </Button>
         </div>
         
-        {/* Like & Comment Counts */}
         <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
           <div>{post.likes} likes</div>
           <div>{post.comments} comments</div>
         </div>
         
-        {/* Action Buttons */}
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
           <BrandedLikeButton 
             onLike={onLike} 
@@ -293,23 +280,21 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </Button>
         </div>
         
-        {/* Comments Section (expandable) */}
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
-              postId={post._id?.toString() || ''}
+              postId={idToString(post._id)}
               initialComments={[]}
               onComment={onComment}
             />
           </div>
         )}
         
-        {/* Message Seller Modal */}
         <MessageSellerModal
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
           seller={{
-            id: post.user._id,
+            id: idToString(post.user._id),
             name: post.user.name,
             avatar: post.user.avatar
           }}
@@ -319,12 +304,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
     );
   }
   
-  // Event view
   if (post.type === 'event') {
     const eventPost = post as EventPost;
     return (
       <Card className="mb-6 overflow-hidden">
-        {/* Event Header with User Info and Event Badge */}
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
@@ -333,7 +316,7 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
             </Avatar>
             <div>
               <div className="flex items-center">
-                <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900 hover:underline">
+                <Link to={`/profile/${idToString(post.user._id)}`} className="font-medium text-gray-900 hover:underline">
                   {post.user.name}
                 </Link>
                 <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800">
@@ -359,7 +342,6 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </DropdownMenu>
         </div>
         
-        {/* Event Image */}
         {post.image && (
           <div className="aspect-video bg-gray-100">
             <img
@@ -370,7 +352,6 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </div>
         )}
         
-        {/* Event Details */}
         <div className="p-4">
           <h3 className="text-xl font-semibold text-gray-900 mb-2">{eventPost.title}</h3>
           <p className="text-gray-700 mb-3">{post.content}</p>
@@ -396,13 +377,11 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </div>
         </div>
         
-        {/* Like & Comment Counts */}
         <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
           <div>{post.likes} likes</div>
           <div>{post.comments} comments</div>
         </div>
         
-        {/* Action Buttons */}
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
           <BrandedLikeButton 
             onLike={onLike} 
@@ -427,11 +406,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
           </Button>
         </div>
         
-        {/* Comments Section (expandable) */}
         {showComments && (
           <div className="px-4 pb-4">
             <CommentsSection 
-              postId={post._id?.toString() || ''}
+              postId={idToString(post._id)}
               initialComments={[]}
               onComment={onComment}
             />
