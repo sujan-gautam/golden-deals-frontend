@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { Share, MoreVertical, MessageCircle, Heart, Calendar, MapPin, ShoppingBag, DollarSign, Info } from 'lucide-react';
+import { Share, MoreVertical, MessageCircle, Heart, Calendar, MapPin, ShoppingBag, DollarSign, Info, ThumbsUp, Users } from 'lucide-react';
 import BrandedLikeButton from './BrandedLikeButton';
 import CommentsSection from './CommentsSection';
 import MessageSellerModal from './MessageSellerModal';
@@ -22,16 +23,21 @@ import { User } from '@/types/user';
 interface PostWithLiked extends Omit<Post, 'likes'> {
   likes: number;
   liked: boolean;
+  shares: number;
 }
 
 interface ProductPost extends Omit<ProductPostType, 'likes'> {
   likes: number;
   liked: boolean;
+  shares: number;
 }
 
-interface EventPost extends Omit<EventPostType, 'likes'> {
+interface EventPost extends Omit<EventPostType, 'likes' | 'interested'> {
   likes: number;
   liked: boolean;
+  shares: number;
+  interested: number;
+  isInterested: boolean;
 }
 
 type PostDisplayType = PostWithLiked | ProductPost | EventPost;
@@ -40,30 +46,44 @@ interface PostTypeDisplayProps {
   post: PostDisplayType;
   onLike: () => void;
   onComment: (content?: string) => void;
+  onShare?: () => void;
+  onInterested?: () => void;
   currentUser?: User;
 }
 
-const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComment, currentUser }) => {
+const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ 
+  post, 
+  onLike, 
+  onComment, 
+  onShare, 
+  onInterested, 
+  currentUser 
+}) => {
   const [showComments, setShowComments] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const { toast } = useToast();
   
   const handleShare = () => {
     const postIdString = idToString(post._id);
-    navigator.clipboard.writeText(window.location.origin + '/post/' + postIdString)
-      .then(() => {
-        toast({
-          title: "Link copied!",
-          description: "Post link has been copied to your clipboard.",
+    
+    if (onShare) {
+      onShare();
+    } else {
+      navigator.clipboard.writeText(window.location.origin + '/post/' + postIdString)
+        .then(() => {
+          toast({
+            title: "Link copied!",
+            description: "Post link has been copied to your clipboard.",
+          });
+        })
+        .catch(() => {
+          toast({
+            title: "Failed to copy",
+            description: "Could not copy the link, please try again.",
+            variant: "destructive",
+          });
         });
-      })
-      .catch(() => {
-        toast({
-          title: "Failed to copy",
-          description: "Could not copy the link, please try again.",
-          variant: "destructive",
-        });
-      });
+    }
   };
   
   const formatTimeAgo = (dateString: string) => {
@@ -121,7 +141,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         
         <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
           <div>{post.likes} likes</div>
-          <div>{post.comments} comments</div>
+          <div className="flex gap-3">
+            <span>{post.comments} comments</span>
+            <span>{post.shares} shares</span>
+          </div>
         </div>
         
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
@@ -253,7 +276,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         
         <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
           <div>{post.likes} likes</div>
-          <div>{post.comments} comments</div>
+          <div className="flex gap-3">
+            <span>{post.comments} comments</span>
+            <span>{post.shares} shares</span>
+          </div>
         </div>
         
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">
@@ -365,13 +391,25 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
               <MapPin className="h-5 w-5 mr-2 text-red-500" />
               <span>{eventPost.location}</span>
             </div>
+            <div className="flex items-center text-gray-600">
+              <Users className="h-5 w-5 mr-2 text-green-500" />
+              <span>{eventPost.interested} people interested</span>
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-3">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Interested
+            <Button 
+              className={`${eventPost.isInterested ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+              onClick={onInterested}
+            >
+              <ThumbsUp className="h-4 w-4 mr-2" />
+              {eventPost.isInterested ? 'Interested' : 'Mark Interested'}
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleShare}
+            >
+              <Share className="h-4 w-4 mr-2" />
               Share Event
             </Button>
           </div>
@@ -379,7 +417,10 @@ const PostTypeDisplay: React.FC<PostTypeDisplayProps> = ({ post, onLike, onComme
         
         <div className="px-4 py-2 border-t border-gray-100 text-sm text-gray-500 flex justify-between">
           <div>{post.likes} likes</div>
-          <div>{post.comments} comments</div>
+          <div className="flex gap-3">
+            <span>{post.comments} comments</span>
+            <span>{post.shares} shares</span>
+          </div>
         </div>
         
         <div className="px-4 py-2 border-t border-b border-gray-100 grid grid-cols-3">

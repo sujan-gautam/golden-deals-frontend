@@ -13,6 +13,7 @@ export interface BasePost {
   image?: string;
   likes: (string | Types.ObjectId)[]; // array of user IDs who liked the post
   comments: number;
+  shares: number; // number of times the post was shared
   createdAt: string;
   type: string;
 }
@@ -31,6 +32,7 @@ export interface EventPost extends BasePost {
   title: string;
   date: string;
   location: string;
+  interested: (string | Types.ObjectId)[]; // array of user IDs who are interested in the event
 }
 
 export type Post = BasePost | ProductPost | EventPost;

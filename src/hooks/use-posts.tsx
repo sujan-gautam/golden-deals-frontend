@@ -1,8 +1,7 @@
-
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Post, idToString } from '../types/post';
-import { getPosts, createPost, likePost, commentOnPost } from '../services/api';
+import { getPosts, createPost, likePost, commentOnPost, markInterestedInEvent, sharePost } from '../services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from './use-auth';
 
@@ -225,6 +224,115 @@ export const usePosts = () => {
     },
   });
 
+  // Mark interested in event mutation
+  const interestedInEventMutation = useMutation({
+    mutationFn: markInterestedInEvent,
+    onMutate: async (eventId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData<Post[]>(['posts']) || [];
+      
+      // Optimistically update the cache
+      queryClient.setQueryData<Post[]>(['posts'], (old = []) => {
+        const updatedPosts = old.map((post: Post) => {
+          if (idToString(post._id) === eventId && post.type === 'event') {
+            const eventPost = post as any; // Using any temporarily since TypeScript doesn't know about interested property
+            const interested = Array.isArray(eventPost.interested) ? [...eventPost.interested] : [];
+            const userId = user?._id as string;
+            const alreadyInterested = interested.includes(userId);
+            
+            return {
+              ...post,
+              interested: alreadyInterested 
+                ? interested.filter(id => idToString(id) !== userId) 
+                : [...interested, userId]
+            };
+          }
+          return post;
+        });
+        
+        storePostsLocally(updatedPosts);
+        return updatedPosts;
+      });
+      
+      return { previousPosts };
+    },
+    onError: (error: any, _eventId, context) => {
+      // Rollback to the previous value
+      if (context?.previousPosts) {
+        queryClient.setQueryData<Post[]>(['posts'], context.previousPosts);
+      }
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark interest in event",
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Your interest has been recorded",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+
+  // Share post mutation
+  const sharePostMutation = useMutation({
+    mutationFn: sharePost,
+    onMutate: async (postId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData<Post[]>(['posts']) || [];
+      
+      // Optimistically update the cache
+      queryClient.setQueryData<Post[]>(['posts'], (old = []) => {
+        const updatedPosts = old.map((post: Post) => {
+          if (idToString(post._id) === postId) {
+            return {
+              ...post,
+              shares: (post as any).shares ? (post as any).shares + 1 : 1
+            };
+          }
+          return post;
+        });
+        
+        storePostsLocally(updatedPosts);
+        return updatedPosts;
+      });
+      
+      return { previousPosts };
+    },
+    onError: (error: any, _postId, context) => {
+      // Rollback to the previous value
+      if (context?.previousPosts) {
+        queryClient.setQueryData<Post[]>(['posts'], context.previousPosts);
+      }
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to share post",
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Post shared successfully",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+
   // Handle like post
   const handleLikePost = (postId: string) => {
     if (!isAuthenticated) {
@@ -276,6 +384,38 @@ export const usePosts = () => {
     createPostMutation.mutate(postData as Post);
   };
 
+  // Handle interested in event
+  const handleInterestedInEvent = (eventId: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "You need to sign in to mark interest in events",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    interestedInEventMutation.mutate(eventId);
+  };
+
+  // Handle share post
+  const handleSharePost = (postId: string) => {
+    sharePostMutation.mutate(postId);
+    
+    // Copy link to clipboard
+    const url = `${window.location.origin}/post/${postId}`;
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        toast({
+          title: "Link copied",
+          description: "Post link has been copied to clipboard",
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to copy link:', error);
+      });
+  };
+
   return {
     posts,
     isLoading,
@@ -286,8 +426,12 @@ export const usePosts = () => {
     handleCreatePost,
     handleLikePost,
     handleCommentOnPost,
+    handleInterestedInEvent,
+    handleSharePost,
     createPostLoading: createPostMutation.isPending,
     likePostLoading: likePostMutation.isPending,
     commentPostLoading: commentPostMutation.isPending,
+    interestedInEventLoading: interestedInEventMutation.isPending,
+    sharePostLoading: sharePostMutation.isPending,
   };
 };

@@ -10,11 +10,42 @@ import UsersList from '@/components/admin/UsersList';
 import PostsList from '@/components/admin/PostsList';
 import EventsList from '@/components/admin/EventsList';
 import ListingsList from '@/components/admin/ListingsList';
-import { BarChart, Activity, Users, ShoppingBag, Calendar } from 'lucide-react';
+import { BarChart, Activity, Users, ShoppingBag, Calendar, Heart, Share2, MessageCircle, ThumbsUp } from 'lucide-react';
+import { usePosts } from '@/hooks/use-posts';
 
 const Dashboard = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const { posts } = usePosts();
+  
+  // Calculate stats for the dashboard
+  const totalUsers = 1258; // This would come from an API in a real app
+  
+  const totalPosts = posts.length;
+  
+  const totalProducts = posts.filter(post => post.type === 'product').length;
+  
+  const totalEvents = posts.filter(post => post.type === 'event').length;
+  
+  const totalLikes = posts.reduce((sum, post) => {
+    return sum + (Array.isArray(post.likes) ? post.likes.length : 0);
+  }, 0);
+  
+  const totalComments = posts.reduce((sum, post) => {
+    return sum + (post.comments || 0);
+  }, 0);
+  
+  const totalShares = posts.reduce((sum, post) => {
+    return sum + ((post as any).shares || 0);
+  }, 0);
+  
+  const totalInterested = posts.reduce((sum, post) => {
+    if (post.type === 'event') {
+      const eventPost = post as any;
+      return sum + (Array.isArray(eventPost.interested) ? eventPost.interested.length : 0);
+    }
+    return sum;
+  }, 0);
 
   return (
     <AdminLayout>
@@ -58,7 +89,7 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,258</div>
+              <div className="text-2xl font-bold">{totalUsers}</div>
               <p className="text-xs text-gray-500">+12% from last month</p>
             </CardContent>
           </Card>
@@ -69,7 +100,7 @@ const Dashboard = () => {
               <Activity className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3,427</div>
+              <div className="text-2xl font-bold">{totalPosts}</div>
               <p className="text-xs text-gray-500">+8% from last month</p>
             </CardContent>
           </Card>
@@ -80,7 +111,7 @@ const Dashboard = () => {
               <ShoppingBag className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">642</div>
+              <div className="text-2xl font-bold">{totalProducts}</div>
               <p className="text-xs text-gray-500">+15% from last month</p>
             </CardContent>
           </Card>
@@ -91,8 +122,55 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">24</div>
+              <div className="text-2xl font-bold">{totalEvents}</div>
               <p className="text-xs text-gray-500">-3% from last month</p>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Engagement metrics */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Likes</CardTitle>
+              <Heart className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalLikes}</div>
+              <p className="text-xs text-gray-500">+23% from last month</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
+              <MessageCircle className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalComments}</div>
+              <p className="text-xs text-gray-500">+18% from last month</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Shares</CardTitle>
+              <Share2 className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalShares}</div>
+              <p className="text-xs text-gray-500">+32% from last month</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Event Interest</CardTitle>
+              <ThumbsUp className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalInterested}</div>
+              <p className="text-xs text-gray-500">+26% from last month</p>
             </CardContent>
           </Card>
         </div>

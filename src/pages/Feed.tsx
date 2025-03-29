@@ -26,6 +26,8 @@ const Feed = () => {
     handleLikePost,
     handleCommentOnPost,
     handleCreatePost,
+    handleSharePost,
+    handleInterestedInEvent,
     isCreatingPost,
     setIsCreatingPost
   } = usePosts();
@@ -111,23 +113,48 @@ const Feed = () => {
         ) : (
           <>
             {filteredPosts.length > 0 ? (
-              filteredPosts.map((post) => (
-                <PostTypeDisplay
-                  key={idToString(post._id)}
-                  post={{
-                    ...post,
-                    likes: Array.isArray(post.likes) ? post.likes.length : 0,
-                    liked: Array.isArray(post.likes) && user?._id ? post.likes.includes(user._id as string) : false
-                  }}
-                  onLike={() => handleLikePost(idToString(post._id))}
-                  onComment={(content) => {
-                    if (content) {
-                      handleCommentOnPost(idToString(post._id), content);
-                    }
-                  }}
-                  currentUser={user}
-                />
-              ))
+              filteredPosts.map((post) => {
+                const postId = idToString(post._id);
+                const isLiked = Array.isArray(post.likes) && user?._id ? post.likes.includes(user._id as string) : false;
+                const likesCount = Array.isArray(post.likes) ? post.likes.length : 0;
+                let isInterested = false;
+                let interestedCount = 0;
+                
+                if (post.type === 'event') {
+                  const eventPost = post as any;
+                  isInterested = Array.isArray(eventPost.interested) && user?._id 
+                    ? eventPost.interested.includes(user._id as string) 
+                    : false;
+                  interestedCount = Array.isArray(eventPost.interested) 
+                    ? eventPost.interested.length 
+                    : 0;
+                }
+                
+                return (
+                  <PostTypeDisplay
+                    key={postId}
+                    post={{
+                      ...post,
+                      likes: likesCount,
+                      liked: isLiked,
+                      shares: (post as any).shares || 0,
+                      ...(post.type === 'event' ? {
+                        interested: interestedCount,
+                        isInterested: isInterested
+                      } : {})
+                    }}
+                    onLike={() => handleLikePost(postId)}
+                    onComment={(content) => {
+                      if (content) {
+                        handleCommentOnPost(postId, content);
+                      }
+                    }}
+                    onShare={() => handleSharePost(postId)}
+                    onInterested={post.type === 'event' ? () => handleInterestedInEvent(postId) : undefined}
+                    currentUser={user}
+                  />
+                );
+              })
             ) : (
               <div className="text-center py-10 text-gray-500">
                 No {activeTab === 'all' ? 'posts' : activeTab + 's'} to display.

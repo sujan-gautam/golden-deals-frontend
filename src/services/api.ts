@@ -1,4 +1,3 @@
-
 import { User } from '../types/user';
 import { Post, ProductPost, EventPost } from '../types/post';
 import { Story } from '../types/story';
@@ -146,6 +145,18 @@ export const commentOnPost = async (postId: string, content: string) => {
 
 export const getComments = async (postId: string) => {
   return fetchAPI(`posts/${postId}/comments`);
+};
+
+export const markInterestedInEvent = async (eventId: string) => {
+  return fetchAPI(`events/${eventId}/interested`, {
+    method: 'POST',
+  });
+};
+
+export const sharePost = async (postId: string) => {
+  return fetchAPI(`posts/${postId}/share`, {
+    method: 'POST',
+  });
 };
 
 // Stories APIs
@@ -463,6 +474,60 @@ const getLocalProducts = () => {
   } catch (error) {
     console.error('Error getting products from localStorage', error);
     return [];
+  }
+};
+
+const markLocalEventInterested = (eventId: string) => {
+  try {
+    const user = authService.getCurrentUser();
+    if (!user) {
+      throw new Error('User must be authenticated to mark interest in an event');
+    }
+    
+    const posts = getLocalPosts();
+    const updatedPosts = posts.map((post: any) => {
+      if (post._id === eventId && post.type === 'event') {
+        const interested = Array.isArray(post.interested) ? post.interested : [];
+        const userInterested = interested.includes(user._id);
+        
+        return {
+          ...post,
+          interested: userInterested ? interested.filter((id: string) => id !== user._id) : [...interested, user._id]
+        };
+      }
+      return post;
+    });
+    
+    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+    
+    const updatedEvent = updatedPosts.find((post: any) => post._id === eventId);
+    return updatedEvent || { error: 'Event not found' };
+  } catch (error) {
+    console.error('Error marking event interest in localStorage', error);
+    throw new Error('Failed to mark interest locally');
+  }
+};
+
+const shareLocalPost = (postId: string) => {
+  try {
+    const posts = getLocalPosts();
+    const updatedPosts = posts.map((post: any) => {
+      if (post._id === postId) {
+        return {
+          ...post,
+          shares: (post.shares || 0) + 1
+        };
+      }
+      return post;
+    });
+    
+    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+    
+    const updatedPost = updatedPosts.find((post: any) => post._id === postId);
+    return updatedPost || { error: 'Post not found' };
+  } catch (error) {
+    console.error('Error sharing post in localStorage', error);
+    throw new Error('Failed to share post locally');
   }
 };
 

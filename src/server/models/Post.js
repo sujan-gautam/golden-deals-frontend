@@ -22,6 +22,10 @@ const basePostSchema = {
     type: Number,
     default: 0
   },
+  shares: {
+    type: Number,
+    default: 0
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -73,7 +77,11 @@ const eventPostSchema = new mongoose.Schema({
   location: {
     type: String,
     required: true
-  }
+  },
+  interested: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 });
 
 const Post = mongoose.model('Post', postSchema);
