@@ -36,4 +36,15 @@ const commentSchema = new mongoose.Schema({
   }
 });
 
+// Add a virtual to get replies
+commentSchema.virtual('replies', {
+  ref: 'Comment',
+  localField: '_id',
+  foreignField: 'parentId'
+});
+
+// Ensure virtuals are included in JSON
+commentSchema.set('toJSON', { virtuals: true });
+commentSchema.set('toObject', { virtuals: true });
+
 module.exports = mongoose.model('Comment', commentSchema);

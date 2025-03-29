@@ -13,3 +13,17 @@ export interface Comment {
   user?: User;
   replies?: Comment[];
 }
+
+export interface CommentDisplay {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  content: string;
+  likes: number;
+  liked: boolean;
+  createdAt: string;
+  replies?: CommentDisplay[];
+}

@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import CommentsSection from './CommentsSection';
 
 interface PostCardProps {
   post: {
@@ -26,12 +27,15 @@ interface PostCardProps {
     likes: number;
     liked: boolean;
     comments: number;
+    shares: number;
     createdAt: string;
   };
   onLike: () => void;
+  onComment: (content: string) => void;
+  onShare: () => void;
 }
 
-const PostCard = ({ post, onLike }: PostCardProps) => {
+const PostCard = ({ post, onLike, onComment, onShare }: PostCardProps) => {
   const [showComments, setShowComments] = useState(false);
   
   const formatTime = (dateString: string) => {
@@ -59,6 +63,12 @@ const PostCard = ({ post, onLike }: PostCardProps) => {
     }
     
     return date.toLocaleDateString();
+  };
+  
+  const handleCommentSubmitted = (content?: string) => {
+    if (content) {
+      onComment(content);
+    }
   };
   
   return (
@@ -111,17 +121,13 @@ const PostCard = ({ post, onLike }: PostCardProps) => {
         <div className="flex items-center justify-between text-sm text-gray-500 pt-2">
           <div className="flex items-center">
             <span className="flex items-center">
-              <Heart className="h-4 w-4 text-red-500 fill-red-500 mr-1" />
+              <Heart className={`h-4 w-4 ${post.liked ? 'text-red-500 fill-red-500' : 'text-gray-500'} mr-1`} />
               {post.likes}
             </span>
           </div>
-          <div>
-            <button
-              onClick={() => setShowComments(!showComments)}
-              className="hover:underline"
-            >
-              {post.comments} comments
-            </button>
+          <div className="flex space-x-3">
+            <span>{post.comments} comments</span>
+            <span>{post.shares} shares</span>
           </div>
         </div>
       </CardContent>
@@ -145,7 +151,12 @@ const PostCard = ({ post, onLike }: PostCardProps) => {
           <MessageCircle className="mr-2 h-5 w-5" />
           Comment
         </Button>
-        <Button variant="ghost" size="sm" className="flex-1 text-gray-600">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex-1 text-gray-600"
+          onClick={onShare}
+        >
           <Share2 className="mr-2 h-5 w-5" />
           Share
         </Button>
@@ -153,19 +164,10 @@ const PostCard = ({ post, onLike }: PostCardProps) => {
       
       {showComments && (
         <div className="px-4 py-3 border-t">
-          <div className="flex items-center">
-            <Avatar className="h-8 w-8 mr-2">
-              <AvatarImage src={JSON.parse(localStorage.getItem('user') || '{}').avatar} />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder="Write a comment..."
-                className="w-full py-2 px-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-usm-gold"
-              />
-            </div>
-          </div>
+          <CommentsSection 
+            postId={post.id}
+            onComment={handleCommentSubmitted}
+          />
         </div>
       )}
     </Card>

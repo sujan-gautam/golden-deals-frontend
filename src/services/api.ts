@@ -136,17 +136,17 @@ export const likePost = async (postId: string) => {
   });
 };
 
-export const commentOnPost = async (postId: string, content: string) => {
+export const commentOnPost = async (postId: string, content: string, parentId?: string) => {
   try {
     const result = await fetchAPI(`posts/${postId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, parentId }),
     });
     return result;
   } catch (error) {
     console.error('Error posting comment:', error);
     // Fall back to local comments if API fails
-    return commentLocalPost(postId, content);
+    return commentLocalPost(postId, content, parentId);
   }
 };
 
@@ -340,13 +340,16 @@ const getLocalComments = (postId: string) => {
   try {
     // Try to get comments from localStorage
     const commentsJson = localStorage.getItem(`comments_${postId}`);
-    const comments = commentsJson ? JSON.parse(commentsJson) : [];
+    let comments = commentsJson ? JSON.parse(commentsJson) : [];
     
     // Get the current user
     const user = authService.getCurrentUser();
     
-    // For each comment, check if it's liked by the current user
-    return comments.map((comment: any) => {
+    // Organize comments into a hierarchy (parent-child)
+    const parentComments: any[] = [];
+    const childComments: {[key: string]: any[]} = {};
+    
+    comments.forEach((comment: any) => {
       // Set up the proper user reference
       const commentUser = comment.user || {
         _id: comment.userId,
@@ -358,19 +361,37 @@ const getLocalComments = (postId: string) => {
       const likes = Array.isArray(comment.likes) ? comment.likes : [];
       const isLiked = user && likes.includes(user._id);
       
-      return {
+      const processedComment = {
         ...comment,
         user: commentUser,
         liked: isLiked
       };
+      
+      if (comment.parentId) {
+        // This is a reply
+        if (!childComments[comment.parentId]) {
+          childComments[comment.parentId] = [];
+        }
+        childComments[comment.parentId].push(processedComment);
+      } else {
+        // This is a parent comment
+        parentComments.push(processedComment);
+      }
     });
+    
+    // Attach replies to their parent comments
+    parentComments.forEach(comment => {
+      comment.replies = childComments[comment._id] || [];
+    });
+    
+    return parentComments;
   } catch (error) {
     console.error('Error getting comments from localStorage', error);
     return [];
   }
 };
 
-const commentLocalPost = (postId: string, content: string) => {
+const commentLocalPost = (postId: string, content: string, parentId?: string) => {
   try {
     const user = authService.getCurrentUser();
     if (!user) {
@@ -403,6 +424,7 @@ const commentLocalPost = (postId: string, content: string) => {
         avatar: user.avatar
       },
       content,
+      parentId: parentId || null,
       createdAt: new Date().toISOString(),
       likes: []
     };
