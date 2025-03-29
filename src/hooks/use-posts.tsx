@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Post } from '../types/post';
+import { Post, idToString } from '../types/post';
 import { getPosts, createPost, likePost, commentOnPost } from '../services/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from './use-auth';
@@ -63,7 +63,7 @@ export const usePosts = () => {
       const previousPosts = queryClient.getQueryData<Post[]>(['posts']) || [];
       
       // Create temporary post with local ID
-      const tempPost = {
+      const tempPost: Post = {
         ...newPost,
         _id: `temp-${Date.now()}`,
         userId: user?._id || '',
@@ -75,11 +75,12 @@ export const usePosts = () => {
         likes: [],
         comments: 0,
         createdAt: new Date().toISOString(),
-      };
+        type: newPost.type || 'post',
+      } as Post;
       
       // Optimistically update the cache
       const updatedPosts = [tempPost, ...previousPosts];
-      queryClient.setQueryData(['posts'], updatedPosts);
+      queryClient.setQueryData<Post[]>(['posts'], updatedPosts);
       storePostsLocally(updatedPosts);
       
       return { previousPosts };
@@ -90,10 +91,10 @@ export const usePosts = () => {
       
       // Replace temp post with actual post
       const updatedPosts = currentPosts.map((post: Post) => 
-        post._id?.toString().startsWith('temp-') ? newPost : post
+        idToString(post._id).startsWith('temp-') ? newPost : post
       );
       
-      queryClient.setQueryData(['posts'], updatedPosts);
+      queryClient.setQueryData<Post[]>(['posts'], updatedPosts);
       storePostsLocally(updatedPosts);
       
       toast({
@@ -105,7 +106,7 @@ export const usePosts = () => {
     onError: (error: any, _, context) => {
       // Revert to previous posts on error
       if (context?.previousPosts) {
-        queryClient.setQueryData(['posts'], context.previousPosts);
+        queryClient.setQueryData<Post[]>(['posts'], context.previousPosts);
       }
       
       toast({
@@ -133,7 +134,7 @@ export const usePosts = () => {
       // Optimistically update to the new value
       queryClient.setQueryData<Post[]>(['posts'], (old = []) => {
         const updatedPosts = old.map((post: Post) => {
-          if (post._id?.toString() === postId) {
+          if (idToString(post._id) === postId) {
             const likes = Array.isArray(post.likes) ? [...post.likes] : [];
             const userId = user?._id as string;
             const alreadyLiked = likes.includes(userId);
@@ -141,7 +142,7 @@ export const usePosts = () => {
             return {
               ...post,
               likes: alreadyLiked 
-                ? likes.filter(id => id !== userId) 
+                ? likes.filter(id => idToString(id) !== userId) 
                 : [...likes, userId]
             };
           }
@@ -157,7 +158,7 @@ export const usePosts = () => {
     onError: (error: any, _postId, context) => {
       // Rollback to the previous value
       if (context?.previousPosts) {
-        queryClient.setQueryData(['posts'], context.previousPosts);
+        queryClient.setQueryData<Post[]>(['posts'], context.previousPosts);
       }
       
       toast({
@@ -186,7 +187,7 @@ export const usePosts = () => {
       // Optimistically update to the new value
       queryClient.setQueryData<Post[]>(['posts'], (old = []) => {
         const updatedPosts = old.map((post: Post) => {
-          if (post._id?.toString() === postId) {
+          if (idToString(post._id) === postId) {
             return {
               ...post,
               comments: (post.comments || 0) + 1
@@ -210,7 +211,7 @@ export const usePosts = () => {
     onError: (error: any, _, context) => {
       // Rollback to the previous value
       if (context?.previousPosts) {
-        queryClient.setQueryData(['posts'], context.previousPosts);
+        queryClient.setQueryData<Post[]>(['posts'], context.previousPosts);
       }
       
       toast({
@@ -272,7 +273,7 @@ export const usePosts = () => {
       return;
     }
     
-    createPostMutation.mutate(postData);
+    createPostMutation.mutate(postData as Post);
   };
 
   return {

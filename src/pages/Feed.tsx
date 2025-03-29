@@ -14,6 +14,7 @@ import {
 import { ImageIcon, ShoppingBag, Calendar } from "lucide-react";
 import { usePosts } from "@/hooks/use-posts";
 import { useAuth } from "@/hooks/use-auth";
+import { idToString } from "@/types/post";
 
 const Feed = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -112,16 +113,16 @@ const Feed = () => {
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
                 <PostTypeDisplay
-                  key={post._id?.toString()}
+                  key={idToString(post._id)}
                   post={{
                     ...post,
                     likes: Array.isArray(post.likes) ? post.likes.length : 0,
                     liked: Array.isArray(post.likes) && user?._id ? post.likes.includes(user._id as string) : false
                   }}
-                  onLike={() => handleLikePost(post._id as string)}
+                  onLike={() => handleLikePost(idToString(post._id))}
                   onComment={(content) => {
                     if (content) {
-                      handleCommentOnPost(post._id as string, content);
+                      handleCommentOnPost(idToString(post._id), content);
                     }
                   }}
                   currentUser={user}

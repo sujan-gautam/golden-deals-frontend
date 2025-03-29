@@ -3,15 +3,15 @@ import { Types } from 'mongoose';
 
 export interface BasePost {
   _id?: string | Types.ObjectId;
-  userId: string;
+  userId: string | Types.ObjectId;
   user: {
-    _id: string;
+    _id: string | Types.ObjectId;
     name: string;
     avatar: string;
   };
   content: string;
   image?: string;
-  likes: string[]; // array of user IDs who liked the post
+  likes: (string | Types.ObjectId)[]; // array of user IDs who liked the post
   comments: number;
   createdAt: string;
   type: string;
@@ -34,3 +34,9 @@ export interface EventPost extends BasePost {
 }
 
 export type Post = BasePost | ProductPost | EventPost;
+
+// Helper function to convert ObjectId to string safely
+export const idToString = (id: string | Types.ObjectId | undefined): string => {
+  if (!id) return '';
+  return typeof id === 'string' ? id : id.toString();
+};
