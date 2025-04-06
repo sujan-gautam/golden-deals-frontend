@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +12,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ImageIcon, ShoppingBag, Calendar, Filter, TrendingUp, Clock, Sparkles, Zap } from 'lucide-react';
+import { ImageIcon, ShoppingBag, Calendar, Filter, TrendingUp, Clock, Sparkles, Zap, Megaphone, Rocket, StickyNote } from 'lucide-react';
 import { usePosts } from "@/hooks/use-posts";
 import { useAuth } from "@/hooks/use-auth";
 import { idToString } from "@/types/post";
@@ -135,7 +136,7 @@ const Feed = () => {
               <StoriesSection />
             </div>
             
-            {/* Create Post Card with custom design */}
+            {/* Create Post Card with completely new design */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -144,61 +145,82 @@ const Feed = () => {
             >
               <div className="relative">
                 {/* Decorative elements */}
-                <div className="absolute -right-20 -bottom-10 w-40 h-40 bg-gradient-to-l from-yellow-400/20 via-orange-300/10 to-transparent rounded-full blur-3xl"></div>
-                <div className="absolute -left-20 -top-10 w-40 h-40 bg-gradient-to-r from-primary/20 via-indigo-300/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute -right-10 top-10 w-20 h-20 bg-purple-400/20 rounded-full blur-xl"></div>
+                <div className="absolute -left-10 -bottom-10 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"></div>
                 
-                {/* Main card with custom design */}
-                <div className="relative bg-white rounded-xl shadow-md overflow-hidden">
-                  {/* Colorful multi-gradient top accent */}
-                  <div className="h-1.5 w-full bg-gradient-to-r from-purple-600 via-blue-500 to-green-400"></div>
-                  
-                  {/* Content area */}
-                  <div className="p-5">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-10 w-10 ring-2 ring-offset-2 ring-primary/20">
-                        <AvatarImage src={user?.avatar} />
-                        <AvatarFallback>{user?.name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
+                {/* Main hexagonal card with unique design */}
+                <div className="relative">
+                  {/* Hexagonal shape with clip path */}
+                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 shadow-lg overflow-hidden">
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-200/20 to-transparent rounded-full translate-x-10 -translate-y-10"></div>
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-200/20 to-transparent rounded-full -translate-x-10 translate-y-10"></div>
+                    
+                    {/* Sparkling dots */}
+                    <div className="absolute top-8 right-8 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                    <div className="absolute top-20 right-20 w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping"></div>
+                    <div className="absolute bottom-12 left-12 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                    
+                    {/* Content area */}
+                    <div className="relative">
+                      <div className="mb-4 text-center">
+                        <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
+                          Inspire the Community
+                        </h3>
+                        <p className="text-xs text-gray-500">What's your story today?</p>
+                      </div>
                       
-                      <div className="flex-1" onClick={() => setIsCreatingPost(true)}>
-                        <Textarea 
-                          placeholder="Share something inspiring..."
-                          className="resize-none bg-gray-50/80 min-h-[60px] border-gray-200 hover:border-primary/30 transition-colors cursor-pointer"
-                          readOnly
-                        />
-                        
-                        <div className="flex justify-between items-center mt-3">
-                          <div className="flex gap-1">
-                            <motion.button
-                              whileHover={{ y: -2 }}
-                              className="rounded-lg px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium flex items-center"
-                            >
-                              <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
-                              Photo
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ y: -2 }}
-                              className="rounded-lg px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium flex items-center"
-                            >
-                              <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
-                              Product
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ y: -2 }}
-                              className="rounded-lg px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-medium flex items-center"
-                            >
-                              <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                              Event
-                            </motion.button>
+                      <div className="flex flex-col space-y-3" onClick={() => setIsCreatingPost(true)}>
+                        <div className="group relative cursor-pointer">
+                          <div className="h-20 bg-white/60 backdrop-blur-sm rounded-xl border border-indigo-100 focus-within:border-indigo-300 transition-all px-4 py-2 flex items-center justify-center">
+                            <div className="text-center text-gray-400 group-hover:text-indigo-500 transition-colors">
+                              <StickyNote className="h-6 w-6 mx-auto mb-1 opacity-70 group-hover:scale-110 transition-transform" />
+                              <span className="text-sm">Express a thought or idea...</span>
+                            </div>
                           </div>
                           
+                          {/* Pulsing effect around the input */}
+                          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-indigo-200/50 via-purple-200/50 to-pink-200/50 rounded-xl blur-md opacity-0 group-hover:opacity-70 transition-opacity"></div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3">
                           <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="rounded-lg px-4 py-1.5 bg-gradient-to-r from-primary to-purple-600 text-white text-xs font-medium flex items-center shadow-sm"
+                            whileHover={{ y: -3, boxShadow: "0 4px 6px rgba(37, 99, 235, 0.1)" }}
+                            whileTap={{ y: 0 }}
+                            className="rounded-xl bg-gradient-to-br from-blue-500/90 to-blue-600/90 text-white py-3 px-2 flex flex-col items-center justify-center text-xs shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsCreatingPost(true);
+                            }}
                           >
-                            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                            Create
+                            <Megaphone className="h-5 w-5 mb-1" />
+                            <span>Post</span>
+                          </motion.button>
+                          
+                          <motion.button
+                            whileHover={{ y: -3, boxShadow: "0 4px 6px rgba(16, 185, 129, 0.1)" }}
+                            whileTap={{ y: 0 }}
+                            className="rounded-xl bg-gradient-to-br from-emerald-500/90 to-emerald-600/90 text-white py-3 px-2 flex flex-col items-center justify-center text-xs shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsCreatingPost(true);
+                            }}
+                          >
+                            <ShoppingBag className="h-5 w-5 mb-1" />
+                            <span>Product</span>
+                          </motion.button>
+                          
+                          <motion.button
+                            whileHover={{ y: -3, boxShadow: "0 4px 6px rgba(168, 85, 247, 0.1)" }}
+                            whileTap={{ y: 0 }}
+                            className="rounded-xl bg-gradient-to-br from-purple-500/90 to-purple-600/90 text-white py-3 px-2 flex flex-col items-center justify-center text-xs shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsCreatingPost(true);
+                            }}
+                          >
+                            <Calendar className="h-5 w-5 mb-1" />
+                            <span>Event</span>
                           </motion.button>
                         </div>
                       </div>
