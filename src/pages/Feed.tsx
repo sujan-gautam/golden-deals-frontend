@@ -12,7 +12,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ImageIcon, ShoppingBag, Calendar, Filter, TrendingUp, Clock } from "lucide-react";
+import { ImageIcon, ShoppingBag, Calendar, Filter, TrendingUp, Clock, Sparkles, Zap } from 'lucide-react';
 import { usePosts } from "@/hooks/use-posts";
 import { useAuth } from "@/hooks/use-auth";
 import { idToString } from "@/types/post";
@@ -135,48 +135,75 @@ const Feed = () => {
               <StoriesSection />
             </div>
             
-            {/* Create Post Card with gradient background */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow p-4 mb-6">
-              <div className="flex items-center space-x-3">
-                <Avatar>
-                  <AvatarImage src={user?.avatar} />
-                  <AvatarFallback>{user?.name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                <Button
-                  variant="outline"
-                  className="flex-grow text-left justify-start text-gray-500 font-normal h-11 bg-white/80 backdrop-blur-sm"
-                  onClick={() => setIsCreatingPost(true)}
-                >
-                  What's on your mind?
-                </Button>
+            {/* Create Post Card with unique design */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-6 overflow-hidden"
+            >
+              <div className="relative">
+                {/* Decorative elements */}
+                <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-gradient-to-l from-purple-200/30 to-transparent rounded-full blur-xl"></div>
+                <div className="absolute -left-10 -top-10 w-32 h-32 bg-gradient-to-r from-primary/20 to-transparent rounded-full blur-xl"></div>
+                
+                {/* Main card with glass effect */}
+                <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100/80 overflow-hidden">
+                  {/* Top decorative wave */}
+                  <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-r from-primary/20 via-blue-300/20 to-purple-300/20"></div>
+                  
+                  <div className="p-6 pt-10">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-primary/20">
+                        <AvatarImage src={user?.avatar} />
+                        <AvatarFallback>{user?.name?.[0] || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <Button
+                        variant="outline"
+                        className="flex-grow text-left justify-start text-gray-500 font-normal h-12 bg-gray-50/80 backdrop-blur-sm hover:bg-gray-50 transition-colors border-gray-200"
+                        onClick={() => setIsCreatingPost(true)}
+                      >
+                        <span className="mr-2">✨</span>
+                        What's on your mind?
+                      </Button>
+                    </div>
+                    
+                    <div className="mt-6 grid grid-cols-3 gap-2">
+                      <Button
+                        variant="ghost"
+                        className="flex flex-col items-center justify-center py-3 text-blue-600 hover:bg-blue-50 rounded-xl space-y-1 transition-all hover:scale-105"
+                        onClick={() => setIsCreatingPost(true)}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <ImageIcon className="h-5 w-5" />
+                        </div>
+                        <span className="text-xs font-medium">Photo</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex flex-col items-center justify-center py-3 text-green-600 hover:bg-green-50 rounded-xl space-y-1 transition-all hover:scale-105"
+                        onClick={() => setIsCreatingPost(true)}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <ShoppingBag className="h-5 w-5" />
+                        </div>
+                        <span className="text-xs font-medium">Product</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex flex-col items-center justify-center py-3 text-purple-600 hover:bg-purple-50 rounded-xl space-y-1 transition-all hover:scale-105"
+                        onClick={() => setIsCreatingPost(true)}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                          <Calendar className="h-5 w-5" />
+                        </div>
+                        <span className="text-xs font-medium">Event</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex mt-4 pt-4 border-t">
-                <Button
-                  variant="ghost"
-                  className="flex-1 text-blue-600 hover:bg-blue-50"
-                  onClick={() => setIsCreatingPost(true)}
-                >
-                  <ImageIcon className="mr-2 h-5 w-5" />
-                  Photo
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-1 text-green-600 hover:bg-green-50"
-                  onClick={() => setIsCreatingPost(true)}
-                >
-                  <ShoppingBag className="mr-2 h-5 w-5" />
-                  Product
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-1 text-purple-600 hover:bg-purple-50"
-                  onClick={() => setIsCreatingPost(true)}
-                >
-                  <Calendar className="mr-2 h-5 w-5" />
-                  Event
-                </Button>
-              </div>
-            </div>
+            </motion.div>
 
             {/* Feed Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6">

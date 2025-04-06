@@ -8,6 +8,7 @@ import CreateStoryModal from './CreateStoryModal';
 import ViewStoryModal from './ViewStoryModal';
 import { getStories, createStory, viewStory } from '@/services/api';
 import { useAuth } from '@/hooks/use-auth';
+import { motion } from 'framer-motion';
 
 const StoriesSection = () => {
   const [stories, setStories] = useState<Story[]>([]);
@@ -86,37 +87,78 @@ const StoriesSection = () => {
   
   if (loading) {
     return (
-      <div className="mb-6">
-        <h2 className="text-md font-semibold ml-1 mb-2">Stories</h2>
-        <div className="flex overflow-x-auto pb-2 space-x-3 scrollbar-hide">
-          <div className="w-16 h-16 rounded-full bg-gray-200 animate-pulse"></div>
-          <div className="w-16 h-16 rounded-full bg-gray-200 animate-pulse"></div>
-          <div className="w-16 h-16 rounded-full bg-gray-200 animate-pulse"></div>
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold ml-1 mb-3 text-gray-800">Stories</h2>
+        <div className="flex overflow-x-auto pb-2 space-x-4 scrollbar-hide">
+          {[1, 2, 3, 4].map((_, index) => (
+            <div key={index} className="relative flex-shrink-0 animate-pulse">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-gray-200"></div>
+              <div className="mt-2 w-16 h-3 bg-gray-200 rounded mx-auto"></div>
+            </div>
+          ))}
         </div>
       </div>
     );
   }
   
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1 }
+  };
+  
   return (
-    <div className="mb-6">
-      <h2 className="text-md font-semibold ml-1 mb-2">Stories</h2>
-      <div className="flex overflow-x-auto pb-2 space-x-3 scrollbar-hide">
-        <AddStoryButton onAddStory={handleAddStory} />
+    <motion.div 
+      className="mb-8 overflow-hidden"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <h2 className="text-lg font-semibold ml-1 mb-3 text-gray-800">Stories</h2>
+      
+      <div className="relative">
+        {/* Decorative elements */}
+        <div className="absolute -left-8 -top-8 w-16 h-16 bg-gradient-to-r from-primary/20 to-purple-300/20 rounded-full blur-xl"></div>
+        <div className="absolute -right-4 top-6 w-12 h-12 bg-gradient-to-l from-blue-300/20 to-primary/20 rounded-full blur-xl"></div>
         
-        {stories && stories.length > 0 ? (
-          stories.map((story, index) => (
-            <StoryItem 
-              key={story._id?.toString() || index}
-              story={story}
-              index={index}
-              onViewStory={viewStoryHandler}
-            />
-          ))
-        ) : (
-          <div className="flex items-center justify-center w-full py-4 text-gray-500">
-            No stories yet. Be the first to add one!
+        {/* Stories container with glass effect */}
+        <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex overflow-x-auto pb-2 space-x-4 scrollbar-hide">
+            <motion.div variants={itemVariants}>
+              <AddStoryButton onAddStory={handleAddStory} />
+            </motion.div>
+            
+            {stories && stories.length > 0 ? (
+              stories.map((story, index) => (
+                <motion.div key={story._id?.toString() || index} variants={itemVariants}>
+                  <StoryItem 
+                    story={story}
+                    index={index}
+                    onViewStory={viewStoryHandler}
+                  />
+                </motion.div>
+              ))
+            ) : (
+              <div className="flex items-center justify-center w-full py-4 text-gray-500">
+                <motion.p 
+                  variants={itemVariants}
+                  className="italic text-sm"
+                >
+                  No stories yet. Be the first to add one!
+                </motion.p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
       
       <CreateStoryModal 
@@ -133,7 +175,7 @@ const StoriesSection = () => {
           initialStoryIndex={selectedStoryIndex}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 

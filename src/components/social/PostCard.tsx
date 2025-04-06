@@ -77,12 +77,16 @@ const PostCard = ({ post, onLike, onComment, onShare }: PostCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
+      whileHover={{ y: -5 }}
+      className="transition-all duration-300"
     >
-      <Card className="mb-4 overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+      <Card className="mb-4 overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-xl">
+        {/* Card Header */}
         <CardContent className="p-4">
           <div className="flex justify-between items-center mb-3">
+            {/* User info section */}
             <div className="flex items-center space-x-3">
-              <Avatar className="ring-2 ring-offset-2 ring-indigo-100">
+              <Avatar className="ring-2 ring-offset-2 ring-indigo-100 h-10 w-10">
                 <AvatarImage src={post.user.avatar} alt={post.user.name} />
                 <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -100,6 +104,7 @@ const PostCard = ({ post, onLike, onComment, onShare }: PostCardProps) => {
               </div>
             </div>
             
+            {/* Post actions dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
@@ -116,21 +121,24 @@ const PostCard = ({ post, onLike, onComment, onShare }: PostCardProps) => {
             </DropdownMenu>
           </div>
           
+          {/* Post content */}
           <div className="mb-3">
             <p className="text-gray-800 whitespace-pre-line">{post.content}</p>
           </div>
           
+          {/* Post image if available */}
           {post.image && (
             <div className="rounded-lg overflow-hidden -mx-4 mb-3">
               <img
                 src={post.image}
                 alt="Post attachment"
-                className="w-full object-cover transition duration-300 hover:scale-105"
+                className="w-full object-cover transition duration-500 hover:scale-105"
                 style={{ maxHeight: '500px' }}
               />
             </div>
           )}
           
+          {/* Post stats */}
           <div className="flex items-center justify-between text-sm text-gray-500 pt-2">
             <div className="flex items-center">
               <span className="flex items-center">
@@ -141,35 +149,41 @@ const PostCard = ({ post, onLike, onComment, onShare }: PostCardProps) => {
               </span>
             </div>
             <div className="flex space-x-3">
-              <span>{post.comments} comments</span>
-              <span>{post.shares} shares</span>
+              <span>{post.comments} {post.comments === 1 ? 'comment' : 'comments'}</span>
+              <span>{post.shares} {post.shares === 1 ? 'share' : 'shares'}</span>
             </div>
           </div>
         </CardContent>
         
+        {/* Post actions footer */}
         <CardFooter className="px-4 py-3 border-t flex justify-between bg-gray-50">
+          {/* Like button */}
           <Button
             variant="ghost"
             size="sm"
-            className={`flex-1 ${post.liked ? 'text-red-500' : 'text-gray-600'} hover:bg-gray-100`}
+            className={`flex-1 ${post.liked ? 'text-red-500' : 'text-gray-600'} hover:bg-gray-100 transition-colors`}
             onClick={onLike}
           >
             <Heart className={`mr-2 h-5 w-5 ${post.liked ? 'fill-current' : ''}`} />
             Like
           </Button>
+          
+          {/* Comment button */}
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 text-gray-600 hover:bg-gray-100"
+            className="flex-1 text-gray-600 hover:bg-gray-100 transition-colors"
             onClick={() => setShowComments(!showComments)}
           >
             <MessageCircle className="mr-2 h-5 w-5" />
             Comment
           </Button>
+          
+          {/* Share button */}
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex-1 text-gray-600 hover:bg-gray-100"
+            className="flex-1 text-gray-600 hover:bg-gray-100 transition-colors"
             onClick={onShare}
           >
             <Share2 className="mr-2 h-5 w-5" />
@@ -177,6 +191,7 @@ const PostCard = ({ post, onLike, onComment, onShare }: PostCardProps) => {
           </Button>
         </CardFooter>
         
+        {/* Comments section (conditionally rendered) */}
         {showComments && (
           <div className="px-4 py-3 border-t bg-gray-50">
             <CommentsSection 
