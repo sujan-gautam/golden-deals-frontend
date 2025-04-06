@@ -9,6 +9,7 @@ import ViewStoryModal from './ViewStoryModal';
 import { getStories, createStory, viewStory } from '@/services/api';
 import { useAuth } from '@/hooks/use-auth';
 import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 const StoriesSection = () => {
   const [stories, setStories] = useState<Story[]>([]);
@@ -88,11 +89,14 @@ const StoriesSection = () => {
   if (loading) {
     return (
       <div className="mb-8">
-        <h2 className="text-lg font-semibold ml-1 mb-3 text-gray-800">Stories</h2>
+        <h2 className="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+          <Sparkles className="mr-2 h-4 w-4 text-primary/70" />
+          Moments
+        </h2>
         <div className="flex overflow-x-auto pb-2 space-x-4 scrollbar-hide">
           {[1, 2, 3, 4].map((_, index) => (
             <div key={index} className="relative flex-shrink-0 animate-pulse">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-gray-200"></div>
+              <div className="w-28 h-40 rounded-3xl bg-gray-200"></div>
               <div className="mt-2 w-16 h-3 bg-gray-200 rounded mx-auto"></div>
             </div>
           ))}
@@ -123,43 +127,53 @@ const StoriesSection = () => {
       animate="visible"
       variants={containerVariants}
     >
-      <h2 className="text-lg font-semibold ml-1 mb-3 text-gray-800">Stories</h2>
+      <h2 className="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+        <Sparkles className="mr-2 h-4 w-4 text-primary/70" />
+        Moments
+      </h2>
       
-      <div className="relative">
+      <motion.div
+        className="relative overflow-visible py-4 px-1"
+        whileHover={{ scale: 1.01 }}
+        transition={{ duration: 0.3 }}
+      >
         {/* Decorative elements */}
-        <div className="absolute -left-8 -top-8 w-16 h-16 bg-gradient-to-r from-primary/20 to-purple-300/20 rounded-full blur-xl"></div>
-        <div className="absolute -right-4 top-6 w-12 h-12 bg-gradient-to-l from-blue-300/20 to-primary/20 rounded-full blur-xl"></div>
+        <div className="absolute -left-6 -top-6 w-32 h-32 bg-gradient-to-r from-blue-400/10 to-purple-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute right-12 top-10 w-32 h-32 bg-gradient-to-l from-primary/10 to-yellow-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute left-1/3 bottom-0 w-24 h-24 bg-gradient-to-tr from-green-400/10 to-blue-300/10 rounded-full blur-3xl"></div>
         
-        {/* Stories container with glass effect */}
-        <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <div className="flex overflow-x-auto pb-2 space-x-4 scrollbar-hide">
-            <motion.div variants={itemVariants}>
-              <AddStoryButton onAddStory={handleAddStory} />
-            </motion.div>
-            
-            {stories && stories.length > 0 ? (
-              stories.map((story, index) => (
-                <motion.div key={story._id?.toString() || index} variants={itemVariants}>
-                  <StoryItem 
-                    story={story}
-                    index={index}
-                    onViewStory={viewStoryHandler}
-                  />
-                </motion.div>
-              ))
-            ) : (
-              <div className="flex items-center justify-center w-full py-4 text-gray-500">
-                <motion.p 
-                  variants={itemVariants}
-                  className="italic text-sm"
-                >
-                  No stories yet. Be the first to add one!
-                </motion.p>
-              </div>
-            )}
+        {/* Horizontal scrolling stories container */}
+        <div className="relative z-10 flex gap-4 py-2 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
+          <div className="pl-1 snap-start">
+            <AddStoryButton onAddStory={handleAddStory} />
           </div>
+          
+          {stories && stories.length > 0 ? (
+            stories.map((story, index) => (
+              <motion.div 
+                key={story._id?.toString() || index} 
+                variants={itemVariants}
+                className="snap-start"
+              >
+                <StoryItem 
+                  story={story}
+                  index={index}
+                  onViewStory={viewStoryHandler}
+                />
+              </motion.div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center min-w-[200px] py-4">
+              <motion.p 
+                variants={itemVariants}
+                className="italic text-sm text-gray-400"
+              >
+                Share your first moment!
+              </motion.p>
+            </div>
+          )}
         </div>
-      </div>
+      </motion.div>
       
       <CreateStoryModal 
         isOpen={isCreateStoryOpen}

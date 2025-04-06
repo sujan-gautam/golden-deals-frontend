@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,6 +16,7 @@ import { usePosts } from "@/hooks/use-posts";
 import { useAuth } from "@/hooks/use-auth";
 import { idToString } from "@/types/post";
 import { motion } from "framer-motion";
+import { Textarea } from "@/components/ui/textarea";
 
 const Feed = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -135,70 +135,73 @@ const Feed = () => {
               <StoriesSection />
             </div>
             
-            {/* Create Post Card with unique design */}
+            {/* Create Post Card with custom design */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="mb-6 overflow-hidden"
+              className="mb-6 overflow-visible"
             >
               <div className="relative">
                 {/* Decorative elements */}
-                <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-gradient-to-l from-purple-200/30 to-transparent rounded-full blur-xl"></div>
-                <div className="absolute -left-10 -top-10 w-32 h-32 bg-gradient-to-r from-primary/20 to-transparent rounded-full blur-xl"></div>
+                <div className="absolute -right-20 -bottom-10 w-40 h-40 bg-gradient-to-l from-yellow-400/20 via-orange-300/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute -left-20 -top-10 w-40 h-40 bg-gradient-to-r from-primary/20 via-indigo-300/10 to-transparent rounded-full blur-3xl"></div>
                 
-                {/* Main card with glass effect */}
-                <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100/80 overflow-hidden">
-                  {/* Top decorative wave */}
-                  <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-r from-primary/20 via-blue-300/20 to-purple-300/20"></div>
+                {/* Main card with custom design */}
+                <div className="relative bg-white rounded-xl shadow-md overflow-hidden">
+                  {/* Colorful multi-gradient top accent */}
+                  <div className="h-1.5 w-full bg-gradient-to-r from-purple-600 via-blue-500 to-green-400"></div>
                   
-                  <div className="p-6 pt-10">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-primary/20">
+                  {/* Content area */}
+                  <div className="p-5">
+                    <div className="flex items-start gap-4">
+                      <Avatar className="h-10 w-10 ring-2 ring-offset-2 ring-primary/20">
                         <AvatarImage src={user?.avatar} />
                         <AvatarFallback>{user?.name?.[0] || 'U'}</AvatarFallback>
                       </Avatar>
-                      <Button
-                        variant="outline"
-                        className="flex-grow text-left justify-start text-gray-500 font-normal h-12 bg-gray-50/80 backdrop-blur-sm hover:bg-gray-50 transition-colors border-gray-200"
-                        onClick={() => setIsCreatingPost(true)}
-                      >
-                        <span className="mr-2">✨</span>
-                        What's on your mind?
-                      </Button>
-                    </div>
-                    
-                    <div className="mt-6 grid grid-cols-3 gap-2">
-                      <Button
-                        variant="ghost"
-                        className="flex flex-col items-center justify-center py-3 text-blue-600 hover:bg-blue-50 rounded-xl space-y-1 transition-all hover:scale-105"
-                        onClick={() => setIsCreatingPost(true)}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <ImageIcon className="h-5 w-5" />
+                      
+                      <div className="flex-1" onClick={() => setIsCreatingPost(true)}>
+                        <Textarea 
+                          placeholder="Share something inspiring..."
+                          className="resize-none bg-gray-50/80 min-h-[60px] border-gray-200 hover:border-primary/30 transition-colors cursor-pointer"
+                          readOnly
+                        />
+                        
+                        <div className="flex justify-between items-center mt-3">
+                          <div className="flex gap-1">
+                            <motion.button
+                              whileHover={{ y: -2 }}
+                              className="rounded-lg px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium flex items-center"
+                            >
+                              <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+                              Photo
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ y: -2 }}
+                              className="rounded-lg px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium flex items-center"
+                            >
+                              <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
+                              Product
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ y: -2 }}
+                              className="rounded-lg px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-medium flex items-center"
+                            >
+                              <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                              Event
+                            </motion.button>
+                          </div>
+                          
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="rounded-lg px-4 py-1.5 bg-gradient-to-r from-primary to-purple-600 text-white text-xs font-medium flex items-center shadow-sm"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                            Create
+                          </motion.button>
                         </div>
-                        <span className="text-xs font-medium">Photo</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex flex-col items-center justify-center py-3 text-green-600 hover:bg-green-50 rounded-xl space-y-1 transition-all hover:scale-105"
-                        onClick={() => setIsCreatingPost(true)}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                          <ShoppingBag className="h-5 w-5" />
-                        </div>
-                        <span className="text-xs font-medium">Product</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex flex-col items-center justify-center py-3 text-purple-600 hover:bg-purple-50 rounded-xl space-y-1 transition-all hover:scale-105"
-                        onClick={() => setIsCreatingPost(true)}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Calendar className="h-5 w-5" />
-                        </div>
-                        <span className="text-xs font-medium">Event</span>
-                      </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
