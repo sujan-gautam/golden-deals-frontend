@@ -1,396 +1,229 @@
-
+// src/components/social/CommentsSection.tsx
 import React, { useState, useEffect } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { useComments } from '@/hooks/use-comments';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { MessageCircle, ThumbsUp, Loader2 } from 'lucide-react';
 import { formatDistance } from 'date-fns';
-import { Heart, Reply, MoreHorizontal, Send } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { getComments, commentOnPost } from '@/services/api';
-import { idToString } from '@/types/post';
-import { CommentDisplay } from '@/types/comment';
+import { Comment } from '@/types/comment';
+import { useAuth } from '@/hooks/use-auth';
+import { Link, useNavigate } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+import CommentLikeButton from './CommentLikeButton';
 
-interface CommentsProps {
+interface CommentsSectionProps {
   postId: string;
-  initialComments?: CommentDisplay[];
-  onComment?: (content?: string) => void;
+  type: 'post' | 'product' | 'event';
 }
 
-const CommentsSection = ({ postId, initialComments = [], onComment }: CommentsProps) => {
-  const [comments, setComments] = useState<CommentDisplay[]>(initialComments);
-  const [newComment, setNewComment] = useState('');
-  const [showReplies, setShowReplies] = useState<Record<string, boolean>>({});
-  const [replyText, setReplyText] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, type }) => {
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const navigate = useNavigate();
+  const [newComment, setNewComment] = useState('');
+  const [replyStates, setReplyStates] = useState<{ [key: string]: { isReplying: boolean; content: string } }>({});
+  const { comments, isLoading, error, addComment, likeComment, refetch } = useComments({
+    postId,
+    type,
+    onAuthRequired: () => {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to comment.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   useEffect(() => {
-    const fetchComments = async () => {
-      if (initialComments.length === 0) {
-        setIsLoading(true);
-        try {
-          const fetchedComments = await getComments(postId);
-          const formattedComments = fetchedComments.map((comment: any) => formatComment(comment));
-          setComments(formattedComments);
-        } catch (error) {
-          console.error('Error fetching comments:', error);
-          // Show empty state on error
-          setComments([]);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    fetchComments();
-  }, [postId, initialComments]);
+    refetch();
+  }, [postId, type, refetch]);
 
-  const formatComment = (comment: any): CommentDisplay => {
-    const formattedComment: CommentDisplay = {
-      id: idToString(comment._id),
-      user: {
-        id: idToString(comment.user?._id || comment.userId),
-        name: comment.user?.name || 'Unknown User',
-        avatar: comment.user?.avatar || 'https://i.pravatar.cc/300',
-      },
-      content: comment.content,
-      likes: Array.isArray(comment.likes) ? comment.likes.length : 0,
-      liked: Array.isArray(comment.likes) && currentUser._id ? 
-        comment.likes.includes(currentUser._id) : false,
-      createdAt: comment.createdAt,
-    };
+  const handleAddComment = (parentId?: string) => {
+    if (!newComment.trim() && !parentId) return;
+    if (!replyStates[parentId || '']?.content.trim() && parentId) return;
 
-    if (comment.replies && Array.isArray(comment.replies)) {
-      formattedComment.replies = comment.replies.map((reply: any) => formatComment(reply));
-    }
+    const content = parentId ? replyStates[parentId].content : newComment;
+    const mentions = extractMentions(content);
+    console.log('Posting comment:', { postId, content, parentId, mentions });
 
-    return formattedComment;
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    try {
-      return formatDistance(new Date(dateString), new Date(), { addSuffix: true });
-    } catch (e) {
-      return 'recently';
-    }
-  };
-
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    
-    setIsSubmitting(true);
-    
-    // Call the API to add a comment
-    commentOnPost(postId, newComment)
-      .then((response) => {
-        // Notify parent component if needed
-        if (onComment) {
-          onComment(newComment);
-        }
-        
-        // Add the new comment to the UI
-        const newCommentObj: CommentDisplay = {
-          id: idToString(response._id || `local-comment-${Date.now()}`),
-          user: {
-            id: currentUser._id || 'current-user',
-            name: currentUser.name || 'You',
-            avatar: currentUser.avatar || 'https://i.pravatar.cc/300?img=8',
-          },
-          content: newComment,
-          likes: 0,
-          liked: false,
-          createdAt: new Date().toISOString(),
-          replies: [],
-        };
-        
-        setComments([newCommentObj, ...comments]);
-        setNewComment('');
-        
-        toast({
-          title: "Comment added",
-          description: "Your comment has been posted successfully.",
-        });
-      })
-      .catch((error) => {
-        console.error('Error adding comment:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add comment. Please try again.",
-          variant: "destructive",
-        });
-      })
-      .finally(() => {
-        setIsSubmitting(false);
-      });
-  };
-
-  const handleAddReply = (commentId: string) => {
-    const replyContent = replyText[commentId];
-    if (!replyContent?.trim()) return;
-    
-    setIsSubmitting(true);
-    
-    // Call the API to add a reply
-    commentOnPost(postId, replyContent, commentId)
-      .then((response) => {
-        const newReply: CommentDisplay = {
-          id: idToString(response._id || `local-reply-${Date.now()}`),
-          user: {
-            id: currentUser._id || 'current-user',
-            name: currentUser.name || 'You',
-            avatar: currentUser.avatar || 'https://i.pravatar.cc/300?img=8',
-          },
-          content: replyContent,
-          likes: 0,
-          liked: false,
-          createdAt: new Date().toISOString(),
-        };
-        
-        // Update the comments state with the new reply
-        setComments(comments.map(comment => {
-          if (comment.id === commentId) {
-            return {
-              ...comment,
-              replies: [...(comment.replies || []), newReply]
-            };
+    addComment(
+      { content, parentId, mentions },
+      {
+        onSuccess: () => {
+          setNewComment('');
+          if (parentId) {
+            setReplyStates((prev) => ({
+              ...prev,
+              [parentId]: { isReplying: false, content: '' },
+            }));
           }
-          return comment;
-        }));
-        
-        // Clear the reply text for this comment
-        setReplyText({...replyText, [commentId]: ''});
-        
-        toast({
-          title: "Reply added",
-          description: "Your reply has been posted successfully.",
-        });
-      })
-      .catch((error) => {
-        console.error('Error adding reply:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add reply. Please try again.",
-          variant: "destructive",
-        });
-      })
-      .finally(() => {
-        setIsSubmitting(false);
-      });
+          refetch();
+          toast({
+            title: 'Comment Posted',
+            description: 'Your comment has been added.',
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: 'Error',
+            description: error.message || 'Failed to post comment. Please try again.',
+            variant: 'destructive',
+          });
+        },
+      }
+    );
   };
 
-  const toggleLike = (commentId: string) => {
-    setComments(comments.map(comment => {
-      if (comment.id === commentId) {
-        const newLiked = !comment.liked;
-        return {
-          ...comment,
-          liked: newLiked,
-          likes: newLiked ? comment.likes + 1 : comment.likes - 1,
-        };
-      }
-      
-      if (comment.replies) {
-        return {
-          ...comment,
-          replies: comment.replies.map(reply => {
-            if (reply.id === commentId) {
-              const newLiked = !reply.liked;
-              return {
-                ...reply,
-                liked: newLiked,
-                likes: newLiked ? reply.likes + 1 : reply.likes - 1,
-              };
-            }
-            return reply;
-          })
-        };
-      }
-      
-      return comment;
-    }));
-  };
-
-  const toggleReplies = (commentId: string) => {
-    setShowReplies({
-      ...showReplies,
-      [commentId]: !showReplies[commentId]
+  const handleLikeComment = (commentId: string) => {
+    likeComment(commentId, {
+      onSuccess: () => {
+        refetch();
+      },
+      onError: (error: any) => {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to like comment. Please try again.',
+          variant: 'destructive',
+        });
+      },
     });
   };
 
-  const CommentItem = ({ comment, isReply = false }: { comment: CommentDisplay, isReply?: boolean }) => (
-    <div className={`flex space-x-3 ${isReply ? 'ml-12 mt-3' : 'mb-4'}`}>
-      <Avatar className="h-8 w-8">
-        <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
-        <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
-      </Avatar>
-      
-      <div className="flex-1">
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
-          <div className="font-medium text-sm">{comment.user.name}</div>
-          <p className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</p>
-        </div>
-        
-        <div className="flex items-center text-xs text-gray-500 mt-1 space-x-3">
-          <span>{formatTimeAgo(comment.createdAt)}</span>
-          
-          <button 
-            onClick={() => toggleLike(comment.id)}
-            className={`font-medium ${comment.liked ? 'text-red-500' : ''}`}
-          >
-            {comment.likes > 0 ? `${comment.likes} Likes` : 'Like'}
-          </button>
-          
-          {!isReply && (
-            <button 
-              className="font-medium"
-              onClick={() => toggleReplies(comment.id)}
+  const toggleReply = (commentId: string) => {
+    setReplyStates((prev) => ({
+      ...prev,
+      [commentId]: {
+        isReplying: !prev[commentId]?.isReplying,
+        content: prev[commentId]?.content || '',
+      },
+    }));
+  };
+
+  const handleReplyChange = (commentId: string, content: string) => {
+    setReplyStates((prev) => ({
+      ...prev,
+      [commentId]: { ...prev[commentId], content },
+    }));
+  };
+
+  const extractMentions = (content: string): string[] => {
+    const mentionRegex = /@(\w+)/g;
+    const matches = content.match(mentionRegex);
+    return matches ? matches.map((m) => m.slice(1)) : [];
+  };
+
+  const renderComment = (comment: Comment, depth: number = 0) => {
+    const isLiked = user && comment.likes.includes(user._id);
+    const replies = comments.filter((c) => c.parentId === comment._id);
+    const avatarFallback = comment.user.name
+      ? comment.user.name.charAt(0)
+      : comment.user.username
+      ? comment.user.username.charAt(0)
+      : 'A';
+
+    return (
+      <div key={comment._id} className={`flex space-x-3 ${depth > 0 ? 'ml-8' : ''} mt-4`}>
+        <Link to={`/profile/${comment.userId}`}>
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={comment.user.avatar} alt={comment.user.name || comment.user.username || 'User'} />
+            <AvatarFallback>{avatarFallback}</AvatarFallback>
+          </Avatar>
+        </Link>
+        <div className="flex-1">
+          <div className="bg-gray-100 rounded-lg p-3">
+            <Link to={`/profile/${comment.userId}`} className="font-semibold text-sm hover:underline">
+              {comment.user.name || comment.user.username || 'Anonymous'}
+            </Link>
+            <p className="text-sm text-gray-700">{comment.content}</p>
+            <div className="text-xs text-gray-500 mt-1">
+              {formatDistance(new Date(comment.createdAt), new Date(), { addSuffix: true })}
+            </div>
+          </div>
+          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleLikeComment(comment._id)}
+              disabled={!isAuthenticated}
             >
+              <CommentLikeButton className={`h-4 w-4 mr-1 ${isLiked ? 'text-blue-500' : ''}`} />
+              {comment.likes.length}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => toggleReply(comment._id)}>
+              <MessageCircle className="h-4 w-4 mr-1" />
               Reply
-            </button>
-          )}
-        </div>
-        
-        {!isReply && comment.replies && comment.replies.length > 0 && (
-          <button 
-            className="text-xs text-primary font-medium mt-1"
-            onClick={() => toggleReplies(comment.id)}
-          >
-            {showReplies[comment.id] 
-              ? `Hide ${comment.replies.length} ${comment.replies.length === 1 ? 'reply' : 'replies'}`
-              : `View ${comment.replies.length} ${comment.replies.length === 1 ? 'reply' : 'replies'}`}
-          </button>
-        )}
-        
-        {!isReply && showReplies[comment.id] && (
-          <div className="mt-2">
-            {comment.replies?.map(reply => (
-              <CommentItem key={reply.id} comment={reply} isReply={true} />
-            ))}
-            
-            <div className="flex items-center mt-3 ml-12">
-              <Avatar className="h-7 w-7 mr-2">
-                <AvatarImage src={currentUser.avatar} />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  placeholder="Write a reply..."
-                  className="w-full py-1.5 px-3 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-primary pr-8"
-                  value={replyText[comment.id] || ''}
-                  onChange={(e) => setReplyText({...replyText, [comment.id]: e.target.value})}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleAddReply(comment.id);
-                    }
-                  }}
-                />
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
-                  onClick={() => handleAddReply(comment.id)}
-                  disabled={isSubmitting || !replyText[comment.id]?.trim()}
+            </Button>
+          </div>
+          {replyStates[comment._id]?.isReplying && (
+            <div className="mt-2">
+              <Textarea
+                value={replyStates[comment._id].content}
+                onChange={(e) => handleReplyChange(comment._id, e.target.value)}
+                placeholder={`Reply to ${comment.user.name || comment.user.username || 'user'}...`}
+                className="w-full"
+              />
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" onClick={() => handleAddComment(comment._id)}>
+                  Post Reply
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => toggleReply(comment._id)}
                 >
-                  <Send className="h-3.5 w-3.5" />
+                  Cancel
                 </Button>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-      
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => toggleLike(comment.id)}>
-            {comment.liked ? 'Unlike' : 'Like'}
-          </DropdownMenuItem>
-          {!isReply && (
-            <DropdownMenuItem onClick={() => toggleReplies(comment.id)}>
-              Reply
-            </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-red-600">Report</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
+          {replies.map((reply) => renderComment(reply, depth + 1))}
+        </div>
+      </div>
+    );
+  };
+
+  if (error) {
+    return (
+      <div className="mt-4 text-red-600">
+        <p>Failed to load comments: {error.message}</p>
+        <Button variant="outline" onClick={() => navigate(`/${type}s`)}>
+          Back to {type.charAt(0).toUpperCase() + type.slice(1)}s
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="pt-3">
-      <Separator className="mb-4" />
-      
-      <div className="flex items-center space-x-3 mb-4">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src={currentUser.avatar} />
-          <AvatarFallback>U</AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            placeholder="Add a comment..."
-            className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleAddComment();
-              }
-            }}
-          />
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-            onClick={handleAddComment}
-            disabled={isSubmitting || !newComment.trim()}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
+    <div className="mt-4">
+      <h4 className="text-lg font-semibold text-gray-800 mb-4">Comments</h4>
       {isLoading ? (
-        <div className="flex justify-center py-4">
-          <div className="animate-pulse flex space-x-3">
-            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-              <div className="h-4 bg-gray-200 rounded w-full max-w-md"></div>
-            </div>
-          </div>
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
         </div>
-      ) : comments.length > 0 ? (
-        <div className="space-y-4">
-          {comments.map(comment => (
-            <CommentItem key={comment.id} comment={comment} />
-          ))}
-        </div>
+      ) : comments.length === 0 ? (
+        <p className="text-gray-500 text-sm">No comments yet. Be the first to comment!</p>
       ) : (
-        <div className="text-center py-6 text-gray-500">
-          Be the first to comment on this post
-        </div>
+        comments
+          .filter((comment) => !comment.parentId)
+          .map((comment) => renderComment(comment))
       )}
+      <div className="mt-4">
+        <Textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder={isAuthenticated ? 'Write a comment...' : 'Sign in to comment'}
+          className="w-full"
+          disabled={!isAuthenticated}
+        />
+        <Button
+          className="mt-2"
+          onClick={() => handleAddComment()}
+          disabled={!newComment.trim() || !isAuthenticated}
+        >
+          Post Comment
+        </Button>
+      </div>
     </div>
   );
 };

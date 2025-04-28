@@ -1,7 +1,6 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,188 +8,488 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Home, Search, MessageSquare, ShoppingBag, Calendar, LogOut, Settings, User, Menu, X } from 'lucide-react';
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bell, Home, Search, MessageSquare, ShoppingBag, Calendar, LogOut, Settings, User, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useDebounce } from 'use-debounce';
+import BottomNavBar from './BottomNavBar';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SocialLayoutProps {
   children: React.ReactNode;
 }
 
 const SocialLayout = ({ children }: SocialLayoutProps) => {
-  const { user, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout, loading } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+  const { unreadCount, unreadMessageCount } = useNotifications();
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [debouncedQuery] = useDebounce(searchQuery, 300);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const suggestionListRef = useRef<HTMLUListElement>(null);
 
+  // Load recent searches
+  useEffect(() => {
+    const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]') as string[];
+    if (debouncedQuery.trim()) {
+      const filteredSuggestions = recentSearches.filter((search) =>
+        search.toLowerCase().includes(debouncedQuery.toLowerCase())
+      );
+      setSuggestions([...new Set([debouncedQuery, ...filteredSuggestions])].slice(0, 5));
+    } else {
+      setSuggestions([]);
+    }
+  }, [debouncedQuery]);
+
+  // Save search query
+  const saveSearchQuery = (query: string) => {
+    if (!query.trim()) return;
+    const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]') as string[];
+    const updatedSearches = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 10);
+    localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
+  };
+
+  // Handle search submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      toast({
+        title: 'Empty Search',
+        description: 'Please enter a search term.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    saveSearchQuery(searchQuery);
+    navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    setSearchQuery('');
+    setIsMobileSearchExpanded(false);
+    setSuggestions([]);
+    if (searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    saveSearchQuery(suggestion);
+    navigate(`/search?q=${encodeURIComponent(suggestion)}`);
+    setIsMobileSearchExpanded(false);
+    setSuggestions([]);
+    if (searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+  };
+
+  // Handle logout
   const handleLogout = () => {
     logout();
+    navigate('/');
+    toast({
+      title: 'Logged Out',
+      description: 'You have been successfully logged out.',
+    });
   };
+
+  // Handle messages click to reset unread count
+  const handleMessagesClick = () => {
+    if (isAuthenticated && user?.id) {
+      queryClient.invalidateQueries({ queryKey: ['unreadMessages', user.id] });
+    }
+    navigate('/messages');
+  };
+
+  // Focus input when search expands
+  useEffect(() => {
+    if (isMobileSearchExpanded && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isMobileSearchExpanded]);
+
+  // Handle clicks outside suggestion dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        suggestionListRef.current &&
+        !suggestionListRef.current.contains(e.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(e.target as Node)
+      ) {
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setSuggestions([]);
+      setIsMobileSearchExpanded(false);
+      setSearchQuery('');
+      if (searchInputRef.current) {
+        searchInputRef.current.blur();
+      }
+    }
+  };
+
+  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+  const fullName = user
+    ? `${user.firstname || ''} ${user.lastname || ''}`.trim() || user.username || 'User'
+    : 'User';
+  const avatarSrc = user?.avatar ? `${IMAGE_URL}${user.avatar}` : undefined;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center gap-2">
+          <svg className="animate-spin h-8 w-8 text-gray-600" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          <span className="text-gray-600">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4">
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-sm">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center">
-              <Link to="/feed" className="flex items-center">
-                <span className="text-xl font-bold">
-                  <span className="text-usm-gold">Social</span>Eagle
+            <div className={cn('flex items-center', isMobileSearchExpanded && 'hidden md:flex')}>
+              <Link to="/" className="flex items-center space-x-2">
+                <span className="text-xl font-bold tracking-tight">
+                  <span className="text-usm-gold">Golden</span> Deals
                 </span>
               </Link>
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-2">
+            <nav className="hidden md:flex items-center space-x-3">
               <Link to="/feed">
-                <Button variant="ghost" size="sm" className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-900 hover:text-usm-gold hover:bg-gray-50"
+                  aria-label="Go to feed"
+                >
                   <Home className="h-5 w-5" />
                 </Button>
               </Link>
-              <Link to="/messages">
-                <Button variant="ghost" size="sm" className="relative">
-                  <MessageSquare className="h-5 w-5" />
-                  <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative text-gray-900 hover:text-usm-gold hover:bg-gray-50"
+                onClick={handleMessagesClick}
+                aria-label={`Messages (${unreadMessageCount} unread)`}
+              >
+                <MessageSquare className="h-5 w-5" />
+                {unreadMessageCount > 0 && (
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 text-xs font-semibold text-white bg-red-500 rounded-full ring-1 ring-white">
+                    {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                  </span>
+                )}
+              </Button>
               <Link to="/marketplace">
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-900 hover:text-usm-gold hover:bg-gray-50"
+                  aria-label="Go to marketplace"
+                >
                   <ShoppingBag className="h-5 w-5" />
                 </Button>
               </Link>
               <Link to="/events">
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-900 hover:text-usm-gold hover:bg-gray-50"
+                  aria-label="Go to events"
+                >
                   <Calendar className="h-5 w-5" />
                 </Button>
               </Link>
             </nav>
 
-            {/* Search */}
-            <div className="hidden md:flex flex-1 max-w-md mx-4">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search SocialEagle..."
-                  className="w-full py-2 pl-10 pr-4 rounded-full bg-gray-100 border-0 focus:ring-2 focus:ring-usm-gold focus:bg-white"
+            {/* Desktop Search Bar */}
+            <div className="hidden md:flex flex-1 max-w-md mx-6 relative">
+              <form onSubmit={handleSearchSubmit} className="relative w-full">
+                <Search
+                  className={cn(
+                    'absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors',
+                    isSearchFocused ? 'text-usm-gold' : 'text-gray-400'
+                  )}
+                  aria-hidden="true"
                 />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search for users, posts, products, events..."
+                  className={cn(
+                    'w-full py-2 pl-10 pr-4 rounded-full bg-gray-100 border-none text-sm text-gray-900',
+                    'focus:ring-2 focus:ring-usm-gold focus:bg-white transition-all duration-200',
+                    'placeholder:text-gray-500'
+                  )}
+                  aria-label="Search Golden Deals"
+                  ref={searchInputRef}
+                />
+                {suggestions.length > 0 && (
+                  <ul
+                    ref={suggestionListRef}
+                    className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50"
+                    role="listbox"
+                    aria-label="Search suggestions"
+                  >
+                    {suggestions.map((suggestion, index) => (
+                      <li
+                        key={index}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 cursor-pointer transition-colors"
+                        role="option"
+                        aria-selected={false}
+                      >
+                        <span className="flex items-center">
+                          <Search className="h-4 w-4 mr-2 text-gray-400" />
+                          {suggestion}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </form>
+            </div>
+
+            {/* Mobile Search Bar (Expanding) */}
+            <div className="md:hidden flex items-center flex-1">
+              <div className="flex items-center w-full transition-all duration-300 ease-in-out">
+                <form
+                  onSubmit={handleSearchSubmit}
+                  className={cn(
+                    'flex items-center transition-all duration-300 flex-1',
+                    isMobileSearchExpanded ? 'w-full' : 'w-0 overflow-hidden'
+                  )}
+                >
+                  <div className="relative w-full">
+                    {isMobileSearchExpanded && (
+                      <Search
+                        className={cn(
+                          'absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors',
+                          isSearchFocused ? 'text-usm-gold' : 'text-gray-400'
+                        )}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <Input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => {
+                        setIsSearchFocused(true);
+                        setIsMobileSearchExpanded(true);
+                      }}
+                      onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={isMobileSearchExpanded ? 'Search Golden Deals...' : ''}
+                      className={cn(
+                        'py-2 pl-10 pr-4 rounded-full bg-gray-100 border-none text-sm text-gray-900',
+                        'focus:ring-2 focus:ring-usm-gold focus:bg-white transition-all duration-300',
+                        'placeholder:text-gray-500',
+                        isMobileSearchExpanded ? 'w-full' : 'w-0 opacity-0 pointer-events-none'
+                      )}
+                      aria-label="Search Golden Deals"
+                      ref={searchInputRef}
+                    />
+                    {isMobileSearchExpanded && suggestions.length > 0 && (
+                      <ul
+                        ref={suggestionListRef}
+                        className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50"
+                        role="listbox"
+                        aria-label="Search suggestions"
+                      >
+                        {suggestions.map((suggestion, index) => (
+                          <li
+                            key={index}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 cursor-pointer transition-colors"
+                            role="option"
+                            aria-selected={false}
+                          >
+                            <span className="flex items-center">
+                              <Search className="h-4 w-4 mr-2 text-gray-400" />
+                              {suggestion}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  {isMobileSearchExpanded && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsMobileSearchExpanded(false);
+                        setSearchQuery('');
+                        setSuggestions([]);
+                        if (searchInputRef.current) {
+                          searchInputRef.current.blur();
+                        }
+                      }}
+                      className="ml-2 text-gray-600 hover:text-gray-900 shrink-0"
+                      aria-label="Cancel search"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </form>
+                {!isMobileSearchExpanded && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsMobileSearchExpanded(true)}
+                    className="text-gray-900 hover:text-usm-gold hover:bg-gray-50 shrink-0"
+                    aria-label="Open search"
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* User Menu */}
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" className="hidden md:flex relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hover:bg-transparent p-0">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatar} alt={user?.name} />
-                      <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col">
-                      <span>{user?.name}</span>
-                      <span className="text-xs text-gray-500">{user?.email}</span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer flex w-full">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="cursor-pointer flex w-full">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  {user?.role === 'admin' && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin/dashboard" className="cursor-pointer flex w-full">
-                        <span className="mr-2">👑</span>
-                        <span>Admin Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Mobile menu button */}
+            {/* User Actions */}
+            <div className={cn('flex items-center space-x-3', isMobileSearchExpanded && 'hidden md:flex')}>
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={() => navigate('/notification')}
+                className="hidden md:flex relative text-gray-900 hover:text-usm-gold hover:bg-gray-50"
+                aria-label={`Notifications (${unreadCount} unread)`}
               >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 text-xs font-semibold text-white bg-red-500 rounded-full ring-1 ring-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Button>
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="p-0 hover:bg-gray-50 rounded-full"
+                      aria-label={`Open user menu for ${fullName}`}
+                    >
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage
+                          src={avatarSrc}
+                          alt={fullName}
+                          onError={(e) => {
+                            console.error('SocialLayout - Failed to load avatar:', avatarSrc);
+                            e.currentTarget.src = '/default-avatar.png'; // Fallback image
+                          }}
+                        />
+                        <AvatarFallback className="bg-gray-200 text-gray-700">
+                          {fullName.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 bg-white shadow-lg rounded-lg py-2">
+                    <DropdownMenuLabel className="px-4 py-3">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-sm font-semibold text-gray-900">{fullName}</span>
+                        <span className="text-xs text-gray-500 truncate">{user?.email || 'No email'}</span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to="/profile"
+                        className="flex items-center px-4 py-2 text-sm text-gray-900 hover:bg-gray-50 hover:text-usm-gold"
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to="/settings"
+                        className="flex items-center px-4 py-2 text-sm text-gray-900 hover:bg-gray-50 hover:text-usm-gold"
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    {user?.role === 'admin' && (
+                      <DropdownMenuItem asChild>
+                        <Link
+                          to="/admin/dashboard"
+                          className="flex items-center px-4 py-2 text-sm text-gray-900 hover:bg-gray-50 hover:text-usm-gold"
+                        >
+                          <span className="mr-2">👑</span>
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-50 hover:text-red-700"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-900 hover:text-usm-gold hover:bg-gray-50"
+                  onClick={() => navigate('/login')}
+                  aria-label="Sign in"
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Mobile Search - Show below header when on mobile */}
-        <div className="md:hidden border-t border-gray-100 px-4 py-2">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search SocialEagle..."
-              className="w-full py-2 pl-10 pr-4 rounded-full bg-gray-100 border-0 focus:ring-2 focus:ring-usm-gold focus:bg-white"
-            />
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100">
-            <div className="flex flex-col px-4 py-2 space-y-1">
-              <Link to="/feed" className="flex items-center py-2">
-                <Home className="mr-3 h-5 w-5" />
-                <span>Home</span>
-              </Link>
-              <Link to="/messages" className="flex items-center py-2">
-                <MessageSquare className="mr-3 h-5 w-5" />
-                <span>Messages</span>
-              </Link>
-              <Link to="/marketplace" className="flex items-center py-2">
-                <ShoppingBag className="mr-3 h-5 w-5" />
-                <span>Marketplace</span>
-              </Link>
-              <Link to="/events" className="flex items-center py-2">
-                <Calendar className="mr-3 h-5 w-5" />
-                <span>Events</span>
-              </Link>
-              <Link to="/notifications" className="flex items-center py-2">
-                <Bell className="mr-3 h-5 w-5" />
-                <span>Notifications</span>
-              </Link>
-            </div>
-          </div>
-        )}
       </header>
-      
+
       {/* Main Content */}
-      <main className="flex-1 pt-6">
-        <div className="container mx-auto">
-          {children}
-        </div>
+      <main className="flex-1 pt-6 pb-20 md:pb-6">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
       </main>
+
+      {/* Bottom Navigation */}
+      {isAuthenticated && <BottomNavBar />}
     </div>
   );
 };

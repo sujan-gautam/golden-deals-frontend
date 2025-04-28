@@ -1,133 +1,202 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User } from '../types/user';
-import { loginUser, registerUser } from '../services/api';
-import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
-import * as authService from '../services/authService';
+import { useToast } from '@/components/ui/use-toast';
+import axios from 'axios';
+
+interface User {
+  id: string;
+  username: string;
+  firstname: string;
+  lastname: string;
+  email: string;
+  avatar?: string; 
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (username: string, firstname: string, lastname: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
-  updateUserProfile: (userData: Partial<User>) => void;
+  updateUserProfile: (userData: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Base URL and API key from environment variables (Vite)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_KEY = import.meta.env.VITE_API_KEY;
+
+// Axios instance with default headers
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': API_KEY,
+  },
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+
+      if (!token || !userData) {
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const currentUser = authService.getCurrentUser();
-        const token = authService.getToken();
-        
-        if (token && currentUser) {
-          setUser(currentUser);
+        const response = await api.get('/users/current', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.data.isLoggedIn) {
+          const user: User = {
+            id: response.data.id,
+            username: response.data.username,
+            firstname: response.data.firstname,
+            lastname: response.data.lastname || response.data.firstname,
+            email: response.data.email,
+            avatar: response.data.avatar,
+          };
+          setUser(user);
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
         }
       } catch (err) {
-        authService.clearAuthData();
-        setUser(null);
+        console.error('Auth check failed:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
-
-  const updateUserProfile = (userData: Partial<User>) => {
-    try {
-      const updatedUser = authService.updateUserProfile(userData);
-      setUser(updatedUser);
-      
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Check if user exists in our registered users
-      if (!authService.isRegisteredUser(email, password)) {
-        throw new Error("Invalid email or password. This user is not registered.");
-      }
-      
-      const response = await loginUser(email, password);
-      authService.saveAuthData(response);
-      setUser(response.user);
-      
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
+      const response = await api.post<{ accesstoken: string; user: User }>('/users/login', {
+        email,
+        password,
       });
-      
-      navigate('/feed');
+
+      const token = response.data.accesstoken;
+      if (!token) throw new Error('No access token received');
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      setIsAuthenticated(true);
+
+      const userResponse = await api.get('/users/current', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (userResponse.data.isLoggedIn) {
+        setUser({
+          id: userResponse.data.id,
+          username: userResponse.data.username,
+          firstname: userResponse.data.firstname,
+          lastname: userResponse.data.lastname || userResponse.data.firstname,
+          email: userResponse.data.email,
+          avatar: userResponse.data.avatar,
+        });
+        toast({
+          title: 'Welcome back!',
+          description: "You've successfully signed in.",
+        });
+        navigate('/feed');
+      } else {
+        throw new Error('User verification failed after login');
+      }
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       toast({
-        title: "Sign in failed",
-        description: err.message,
-        variant: "destructive",
+        title: 'Sign in failed',
+        description: errorMessage,
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (username: string, firstname: string, lastname: string, email: string, password: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Check if user already exists
-      const users = authService.getRegisteredUsers();
-      const existingUser = users.find(user => user.email === email);
-      
-      if (existingUser) {
-        throw new Error("A user with this email already exists");
-      }
-      
-      const response = await registerUser(name, email, password);
-      
-      // Store the user credentials for future login validation
-      authService.saveRegisteredUser(email, password);
-      authService.saveAuthData(response);
-      setUser(response.user);
-      
-      toast({
-        title: "Account created!",
-        description: "You've successfully signed up.",
+      await api.post('/users/register', {
+        username,
+        firstname,
+        lastname,
+        email,
+        password,
+        confirm_password: password,
       });
-      
-      navigate('/onboarding');
+
+      const loginResponse = await api.post<{ accesstoken: string; user: User }>('/users/login', {
+        email,
+        password,
+      });
+
+      const token = loginResponse.data.accesstoken;
+      if (!token) throw new Error('No access token received');
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
+
+      const userResponse = await api.get('/users/current', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (userResponse.data.isLoggedIn) {
+        setUser({
+          id: userResponse.data.id,
+          username: userResponse.data.username,
+          firstname: userResponse.data.firstname,
+          lastname: userResponse.data.lastname || userResponse.data.firstname,
+          email: userResponse.data.email,
+          avatar: userResponse.data.avatar,
+        });
+        setIsAuthenticated(true);
+        toast({
+          title: 'Account created!',
+          description: "You've successfully signed up.",
+        });
+        navigate('/onboarding');
+      }
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
       toast({
-        title: "Sign up failed",
-        description: err.message,
-        variant: "destructive",
+        title: 'Sign up failed',
+        description: errorMessage,
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -135,14 +204,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    authService.clearAuthData();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
+    setError(null);
+    setIsAuthenticated(false);
     navigate('/signin');
-    
     toast({
-      title: "Signed out",
+      title: 'Signed out',
       description: "You've been successfully signed out.",
     });
+  };
+  const updateUserProfile = async (userData: Partial<User>) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+      const response = await api.patch('/users/profile', userData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedUser = { ...user, ...response.data };
+      setUser(updatedUser);
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to update profile.';
+      toast({
+        title: 'Update failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -155,7 +252,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         isAuthenticated: !!user,
-        updateUserProfile
+        updateUserProfile,
       }}
     >
       {children}

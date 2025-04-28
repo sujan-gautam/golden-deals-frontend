@@ -1,14 +1,32 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, CalendarDays, Utensils } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from '@/hooks/use-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const HeroSection = () => {
+const HeroSection = ({ eventLocations = [] }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [shuffledLocations, setShuffledLocations] = useState(eventLocations);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Shuffle locations every 5 seconds
+  useEffect(() => {
+    setShuffledLocations(eventLocations); // Initial set
+    const shuffleInterval = setInterval(() => {
+      setShuffledLocations(prev => {
+        const shuffled = [...prev];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      });
+    }, 5000);
+
+    return () => clearInterval(shuffleInterval);
+  }, [eventLocations]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -25,13 +43,11 @@ const HeroSection = () => {
         description: "Please sign in to search for food and events",
         variant: "default",
       });
-      
-      // This would trigger the auth modal in a production app
       document.getElementById('auth-button')?.click();
     }
   };
   
-  return (
+return (
     <section className="relative bg-gradient-to-b from-white to-gray-50 pt-16 pb-24 overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 z-0 opacity-10">
@@ -49,11 +65,11 @@ const HeroSection = () => {
           </p>
           
           <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 justify-center mb-8">
-            <Link to={isAuthenticated ? "/food" : "/signin"} className="bg-usm-gold text-black px-6 py-4 rounded-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center justify-center">
+            <Link to={isAuthenticated ? "/marketplace" : "/signin"} className="bg-usm-gold text-black px-6 py-4 rounded-xl font-medium hover:bg-usm-gold-dark transition-all flex items-center justify-center">
               <Utensils className="mr-2 h-5 w-5" />
               Order Food
             </Link>
-            <Link to={isAuthenticated ? "/events" : "/signin"} className="bg-black text-white px-6 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all flex items-center justify-center">
+            <Link to={ "/events" } className="bg-black text-white px-6 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all flex items-center justify-center">
               <CalendarDays className="mr-2 h-5 w-5" />
               Browse Events
             </Link>
@@ -77,11 +93,38 @@ const HeroSection = () => {
               </button>
             </form>
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-sm text-gray-600">
-              <span>Popular:</span>
-              <Link to={isAuthenticated ? "/food/the-hub" : "/signin"} className="hover:text-usm-gold transition-colors">The Hub</Link> •
-              <Link to={isAuthenticated ? "/food/fresh-food-company" : "/signin"} className="hover:text-usm-gold transition-colors">Fresh Food Company</Link> •
-              <Link to={isAuthenticated ? "/food/chick-fil-a" : "/signin"} className="hover:text-usm-gold transition-colors">Chick-fil-A</Link> •
-              <Link to={isAuthenticated ? "/events/homecoming" : "/signin"} className="hover:text-usm-gold transition-colors">Homecoming</Link>
+              <span>Popular Locations:</span>
+              <AnimatePresence mode="wait">
+                {shuffledLocations.length > 0 ? (
+                  shuffledLocations.map((location, index) => (
+                    <motion.span
+                      key={location.slug}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.5, ease: 'easeInOut' }}
+                      className="inline-flex items-center"
+                    >
+                      <Link 
+                        to={isAuthenticated ? `/events?location=${encodeURIComponent(location.slug)}` : "/signin"} 
+                        className="hover:text-usm-gold transition-colors"
+                      >
+                        {location.title}
+                      </Link>
+                      {index < shuffledLocations.length - 1 && ' •'}
+                    </motion.span>
+                  ))
+                ) : (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    Loading locations...
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

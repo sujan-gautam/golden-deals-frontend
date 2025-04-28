@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,11 +13,12 @@ import {
 interface CreateStoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateStory: (imageUrl: string, text: string, textColor: string) => void;
+  onCreateStory: (image: File, text: string, textColor: string) => void; // Changed imageUrl to image: File
 }
 
 const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalProps) => {
-  const [storyImage, setStoryImage] = useState('');
+  const [storyImage, setStoryImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [storyText, setStoryText] = useState('');
   const [storyTextColor, setStoryTextColor] = useState('#ffffff');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,37 +27,67 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // In a real app, this would upload to a server and get a URL
-      // For demo, we'll just use a sample image URL
-      setStoryImage('https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?q=80&w=2070&auto=format&fit=crop');
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File too large",
+          description: "Image must be less than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setStoryImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
       toast({
-        title: "Image uploaded",
-        description: "Your image has been successfully uploaded.",
+        title: "Image selected",
+        description: "Your image is ready to be uploaded.",
       });
     }
   };
-  
+
   const handleStoryImageSelect = () => {
-    // Trigger the hidden file input
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
+
   const handleCreateStory = () => {
     if (!storyImage) {
       toast({
         title: "Image required",
         description: "Please add an image to your story.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
+
+    // Pass the File directly to onCreateStory
     onCreateStory(storyImage, storyText, storyTextColor);
-    setStoryImage('');
+
+    // Reset form after calling onCreateStory
+    setStoryImage(null);
+    setPreviewUrl('');
     setStoryText('');
+    setStoryTextColor('#ffffff');
+    onClose();
   };
+
+  // Cleanup preview URL when component unmounts or image changes
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   return (
     <>
@@ -66,29 +96,32 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
           <DialogHeader>
             <DialogTitle>Create Story</DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex flex-col items-center justify-center space-y-4 py-4">
-            {storyImage ? (
+            {previewUrl ? (
               <div className="relative w-full h-64 rounded-lg overflow-hidden">
-                <img src={storyImage} alt="Story" className="w-full h-full object-cover" />
-                
+                <img src={previewUrl} alt="Story" className="w-full h-full object-cover" />
+
                 {storyText && (
                   <div className="absolute inset-0 flex items-center justify-center p-4">
-                    <h3 
-                      className="text-2xl font-bold text-center break-words" 
+                    <h3
+                      className="text-2xl font-bold text-center break-words"
                       style={{ color: storyTextColor }}
                     >
                       {storyText}
                     </h3>
                   </div>
                 )}
-                
+
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
-                  onClick={() => setStoryImage('')}
+                  onClick={() => {
+                    setStoryImage(null);
+                    setPreviewUrl('');
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -105,8 +138,8 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
                 </Button>
               </div>
             )}
-            
-            {storyImage && (
+
+            {previewUrl && (
               <div className="w-full space-y-2">
                 <div className="flex items-center gap-2">
                   <Smile className="h-5 w-5 text-gray-500" />
@@ -118,7 +151,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
                     onChange={(e) => setStoryText(e.target.value)}
                   />
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">Text Color:</span>
                   <div className="flex gap-2">
@@ -135,7 +168,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
               </div>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={handleCreateStory} disabled={!storyImage}>
@@ -144,8 +177,8 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      <input 
+
+      <input
         type="file"
         ref={fileInputRef}
         className="hidden"

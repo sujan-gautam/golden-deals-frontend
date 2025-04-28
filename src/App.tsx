@@ -1,10 +1,10 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/use-auth";
+import Alerts from '@/pages/Alerts';
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
@@ -14,7 +14,17 @@ import Feed from "./pages/Feed";
 import Dashboard from "./pages/admin/Dashboard";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
+import Events from "./pages/Events";
+import SingleEvent from "./pages/SingleEvent";
+import Marketplace from "./pages/Marketplace";
+import SingleProduct from "./pages/SingleProduct";
+import SinglePost from "./pages/SinglePost";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Saved from "./pages/Saved";
+import SearchPage from './pages/SearchPage';
+import GoogleCallback from "@/components/social/GoogleCallback";
+import InterestedPage from "./pages/InterestedPage";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +39,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
             
             <Route path="/onboarding" element={
               <ProtectedRoute>
@@ -50,11 +61,21 @@ const App = () => (
                 <Profile />
               </ProtectedRoute>
             } />
-            <Route path="/messages" element={
+            <Route path="/notification" element={
               <ProtectedRoute>
-                <Messages />
+                <Alerts />
               </ProtectedRoute>
             } />
+            <Route path="/messages/:conversationId" element={
+  <ProtectedRoute>
+    <Messages />
+  </ProtectedRoute>
+} />
+<Route path="/messages" element={
+  <ProtectedRoute>
+    <Messages />
+  </ProtectedRoute>
+} />
             
             {/* Food Routes */}
             <Route path="/food" element={
@@ -75,15 +96,56 @@ const App = () => (
             
             {/* Events Routes */}
             <Route path="/events" element={
-              <ProtectedRoute>
-                <NotFound />
-              </ProtectedRoute>
+                <Events />
             } />
             <Route path="/events/:id" element={
               <ProtectedRoute>
-                <NotFound />
+                 <SingleEvent />
               </ProtectedRoute>
             } />
+            
+            {/* Events Routes */}
+            <Route path="/search" element={
+              <ProtectedRoute>
+                 <SearchPage />
+              </ProtectedRoute>
+            } />
+            
+            
+            {/* Saved Items Routes */}
+            <Route path="/saved" element={
+              <ProtectedRoute>
+                 <Saved />
+              </ProtectedRoute>
+            } />
+
+
+             {/* Marketplace Routes */}
+             <Route path="/marketplace" element={
+                <Marketplace />
+            } />
+
+             <Route path="/products/:id" element={
+               <ProtectedRoute>
+                 <SingleProduct />
+               </ProtectedRoute>
+             } />
+
+             <Route path="/post/:id" element={
+               <ProtectedRoute>
+                 <SinglePost />
+               </ProtectedRoute>
+             } />
+
+            {/* Login Routes */}
+            <Route path="/login" element={
+               <SignIn />
+           } />
+
+            {/* Settings Routes */}
+            <Route path="/settings" element={
+               <Settings />
+           } />
             
             <Route path="/saved" element={
               <ProtectedRoute>

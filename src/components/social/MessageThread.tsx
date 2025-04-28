@@ -1,166 +1,302 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Conversation, Message } from "@/types/message";
-import { Send, ArrowLeft, MoreVertical, Image, Paperclip } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import React, { useState, useEffect, useRef } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Conversation, Message } from '@/types/message';
+import { ChevronLeft, Send } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useMessaging } from './MessagingProvider';
+import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { DollarSign, Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface MessageThreadProps {
   conversation: Conversation | null;
   messages: Message[];
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, conversationId: string) => Promise<void>;
   onBack: () => void;
   isMobile: boolean;
-  loading?: boolean; // Add loading prop
 }
 
-const MessageThread = ({ 
-  conversation, 
-  messages, 
-  onSendMessage, 
+const MessageThread: React.FC<MessageThreadProps> = ({
+  conversation,
+  messages,
+  onSendMessage,
   onBack,
   isMobile,
-  loading
-}: MessageThreadProps) => {
-  const [newMessage, setNewMessage] = useState('');
+}) => {
+  const [input, setInput] = useState('');
+  const [localMessages, setLocalMessages] = useState<Message[]>(messages);
+  const { user } = useAuth();
+  const { socket, joinConversation } = useMessaging();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isUserScrolling = useRef(false);
 
-  const otherParticipant = conversation?.participants.find(p => p._id !== '1');
+  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Sync messages and join conversation
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    setLocalMessages(messages);
+    if (conversation?._id) {
+      joinConversation(conversation._id);
+    }
+  }, [conversation?._id, messages, joinConversation]);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim()) {
-      onSendMessage(newMessage);
-      setNewMessage('');
+  // Handle scroll behavior
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (!isUserScrolling.current && messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+    scrollToBottom();
+  }, [localMessages]);
+
+  // Track user scrolling to prevent auto-scroll when user is reading
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        // Consider user scrolling if not near the bottom
+        isUserScrolling.current = scrollTop + clientHeight < scrollHeight - 50;
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // WebSocket for real-time messages
+  useEffect(() => {
+    if (!conversation?._id || !socket) return;
+
+    const handleReceiveMessage = (newMessage: Message) => {
+      if (newMessage.conversationId === conversation._id) {
+        setLocalMessages((prev) => {
+          const tempIndex = prev.findIndex(
+            (msg) =>
+              msg._id.startsWith('temp-') &&
+              msg.content === newMessage.content &&
+              (msg.sender?._id === newMessage.sender?._id ||
+               msg.sender?._id === newMessage.senderId ||
+               msg.sender?._id === newMessage.receiver)
+          );
+          if (tempIndex !== -1) {
+            const updated = [...prev];
+            updated[tempIndex] = newMessage;
+            return updated;
+          }
+          if (!prev.some((msg) => msg._id === newMessage._id)) {
+            return [...prev, newMessage];
+          }
+          return prev;
+        });
+      }
+    };
+
+    socket.on('receive_message', handleReceiveMessage);
+    return () => socket.off('receive_message', handleReceiveMessage);
+  }, [conversation?._id, socket]);
+
+  const handleSend = async () => {
+    if (!input.trim() || !conversation?._id || !user) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: Message = {
+      _id: tempId,
+      conversationId: conversation._id,
+      sender: { _id: user.id, username: user.username || '', avatar: user.avatar || '' },
+      content: input,
+      createdAt: new Date().toISOString(),
+      product: null,
+    };
+
+    setLocalMessages((prev) => [...prev, tempMessage]);
+    setInput('');
+    isUserScrolling.current = false; // Ensure scroll to bottom on new message
+
+    try {
+      await onSendMessage(input, conversation._id);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setLocalMessages((prev) => prev.filter((msg) => msg._id !== tempId));
     }
   };
 
-  if (!conversation) {
+  if (!user || !conversation) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-500">
-        <div className="rounded-full bg-gray-100 p-6 mb-4">
-          <Send className="h-8 w-8" />
-        </div>
-        <h3 className="text-lg font-medium mb-2">Your Messages</h3>
-        <p className="max-w-sm">Select a conversation from the list or start a new one.</p>
+      <div className="flex flex-col items-center justify-center h-full text-gray-500">
+        <p>{!user ? 'Loading user...' : 'Select a conversation'}</p>
       </div>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center p-4 border-b">
-          <Avatar className="h-10 w-10 mr-3 animate-pulse bg-gray-200" />
-          <div className="flex-1">
-            <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse mt-1"></div>
-          </div>
-        </div>
-        <div className="flex-1 p-4 space-y-4">
-          <div className="flex justify-start">
-            <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse mr-2"></div>
-            <div className="rounded-lg py-2 px-3 bg-gray-200 animate-pulse h-10 w-32"></div>
-          </div>
-          <div className="flex justify-end">
-            <div className="rounded-lg py-2 px-3 bg-gray-200 animate-pulse h-10 w-40"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const otherParticipant = conversation.participants.find((p) => p._id !== user.id);
+  const displayName = otherParticipant
+    ? `${otherParticipant.firstname || ''} ${otherParticipant.lastname || ''}`.trim() || otherParticipant.username || 'Unknown'
+    : 'Unknown';
+  const headerAvatarSrc = otherParticipant?.avatar ? `${IMAGE_URL}${otherParticipant.avatar}` : undefined;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center p-4 border-b">
+    <div className="flex flex-col h-full bg-white">
+      {/* Fixed Header */}
+      <header className="sticky top-0 z-20 bg-white border-b shadow-sm p-3 flex items-center">
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <Link to="/messages" onClick={onBack}>
+            <Button variant="ghost" size="icon" className="mr-2">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </Link>
         )}
-        <Avatar className="h-10 w-10 mr-3">
-          <AvatarImage src={otherParticipant?.avatar} alt={otherParticipant?.name || 'User'} />
-          <AvatarFallback>{otherParticipant?.name?.[0] || 'U'}</AvatarFallback>
+        <Avatar className="h-9 w-9 mr-3">
+          <AvatarImage src={headerAvatarSrc} alt={displayName} />
+          <AvatarFallback className="bg-gray-300 text-gray-600">{displayName[0] || 'U'}</AvatarFallback>
         </Avatar>
-        <div className="flex-1">
-          <h4 className="font-medium">{otherParticipant?.name}</h4>
-          <p className="text-xs text-gray-500">Active now</p>
-        </div>
-        <Button variant="ghost" size="icon">
-          <MoreVertical className="h-5 w-5" />
-        </Button>
-      </div>
+        <h2 className="text-base font-semibold truncate">{displayName}</h2>
+      </header>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => {
-          const isOwnMessage = message.senderId === '1';
-          const sender = conversation.participants.find(p => p._id === message.senderId);
+      {/* Messages Area */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto p-4 bg-gray-50"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <style>{`
+          .scrollbar-hidden::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        {localMessages.length === 0 ? (
+          <div className="text-center text-gray-500 mt-4">No messages yet</div>
+        ) : (
+          <AnimatePresence>
+            {localMessages
+              .filter((message) => {
+                const isValid =
+                  (message.sender && message.sender._id) ||
+                  message.senderId ||
+                  (message.receiver && user && message.receiver !== user.id) ||
+                  (user && conversation?.participants.some((p) => p._id === user.id));
+                return isValid;
+              })
+              .map((message) => {
+                const senderId =
+                  message.sender?._id ||
+                  message.senderId ||
+                  (message.receiver && user && message.receiver !== user.id ? message.receiver : user.id);
+                const isSentByUser = senderId?.toString() === user.id.toString();
+                const senderUser = isSentByUser
+                  ? { _id: user.id, username: user.username || '', avatar: user.avatar || '' }
+                  : otherParticipant || { _id: senderId, username: 'Unknown', avatar: '' };
+                const messageAvatarSrc = senderUser.avatar ? `${IMAGE_URL}${senderUser.avatar}` : undefined;
 
-          return (
-            <div 
-              key={message._id?.toString()}
-              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-            >
-              {!isOwnMessage && (
-                <Avatar className="h-8 w-8 mr-2 mt-1">
-                  <AvatarImage src={sender?.avatar} alt={sender?.name || 'User'} />
-                  <AvatarFallback>{sender?.name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-              )}
-              <div>
-                <div 
-                  className={`inline-block rounded-lg py-2 px-3 max-w-xs break-words ${
-                    isOwnMessage 
-                    ? 'bg-usm-gold text-white rounded-br-none' 
-                    : 'bg-gray-100 text-gray-800 rounded-bl-none'
-                  }`}
-                >
-                  {message.content}
-                </div>
-                <div className={`text-xs text-gray-500 mt-1 ${isOwnMessage ? 'text-right' : ''}`}>
-                  {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                return (
+                  <motion.div
+                    key={message._id.toString()}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className={`flex items-end gap-2 mb-4 ${
+                      isSentByUser ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {!isSentByUser && (
+                      <Avatar className="h-8 w-8 mb-1 flex-shrink-0">
+                        <AvatarImage src={messageAvatarSrc} alt={senderUser.username || displayName} />
+                        <AvatarFallback className="bg-gray-300 text-gray-600">
+                          {(senderUser.username || displayName)[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div
+                      className={`max-w-[70%] p-3 rounded-2xl shadow-sm ${
+                        isSentByUser
+                          ? 'bg-yellow-500 text-white rounded-br-md'
+                          : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                      }`}
+                    >
+                      {message.product && (
+                        <div className="mb-2 p-2 bg-white text-gray-800 rounded-lg shadow-inner">
+                          {message.product.image && (
+                            <img
+                              src={message.product.image}
+                              alt={message.product.title}
+                              className="w-full h-24 object-cover rounded-md mb-2"
+                            />
+                          )}
+                          <h3 className="text-sm font-semibold">
+                            <Link
+                              to={`/products/${message.product._id}`}
+                              className="text-blue-600 hover:underline"
+                            >
+                              {message.product.title}
+                            </Link>
+                          </h3>
+                          {message.product.price !== null && (
+                            <p className="text-xs flex items-center">
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              {message.product.price}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {message.product.condition && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Info className="h-3 w-3 mr-1" />
+                                {message.product.condition}
+                              </Badge>
+                            )}
+                            {message.product.category && (
+                              <Badge variant="outline" className="text-xs">
+                                {message.product.category}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <span
+                        className={`text-xs block mt-1 ${
+                          isSentByUser ? 'text-yellow-100' : 'text-gray-500'
+                        }`}
+                      >
+                        {format(new Date(message.createdAt), 'p')}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+          </AnimatePresence>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSend} className="p-4 border-t">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" type="button">
-            <Paperclip className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" type="button">
-            <Image className="h-5 w-5" />
-          </Button>
-          <input
-            type="text"
-            placeholder="Type a message..."
-            className="flex-1 py-2 px-3 rounded-full border focus:ring-2 focus:ring-usm-gold focus:outline-none"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+      {/* Fixed Input Area */}
+      <footer className="sticky bottom-0 z-10 bg-white border-t p-3">
+        <div className="flex items-center">
+          <Input
+            placeholder="Message..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            className="flex-1 mr-2 rounded-full border-gray-300 text-sm py-2 px-4 focus:ring-0 focus:border-gray-400"
+            autoComplete="off"
           />
-          <Button 
-            type="submit" 
-            size="icon" 
-            disabled={!newMessage.trim()}
-            className={`rounded-full ${!newMessage.trim() ? 'opacity-50' : ''}`}
+          <Button
+            onClick={handleSend}
+            disabled={!input.trim()}
+            className="rounded-full h-9 w-9 p-0 flex items-center justify-center bg-yellow-500 hover:bg-yellow-600"
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4" />
           </Button>
         </div>
-      </form>
+      </footer>
     </div>
   );
 };

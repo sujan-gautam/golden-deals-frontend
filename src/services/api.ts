@@ -4,90 +4,59 @@ import { Story } from '../types/story';
 import { Conversation, Message } from '../types/message';
 import { Comment } from '../types/comment';
 import * as authService from './authService';
+import { getToken } from './authService';
 
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? '/api' 
-  : 'http://localhost:5000/api';
+// Use import.meta.env for Vite
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 // Helper function for API calls
-const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
+export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   const token = authService.getToken();
-  
+  // console.log(`Fetching ${endpoint} with token:`, token);
+
   const headers = {
-    'Content-Type': 'application/json',
+    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    'x-api-key': API_KEY || 'mySuperSecretToken',
     ...options.headers,
   };
-  
+
   try {
     const response = await fetch(`${API_URL}/${endpoint}`, {
       ...options,
       headers,
     });
-    
-    const data = await response.json();
-    
+
     if (!response.ok) {
-      throw new Error(data.message || 'Something went wrong');
+      const text = await response.text();
+      let errorMessage = `HTTP error ${response.status}`;
+      try {
+        const json = JSON.parse(text);
+        errorMessage = json.message || errorMessage;
+        if (response.status === 401) {
+          console.warn('Unauthorized access, logging out...');
+          authService.logout();
+          window.location.href = '/login';
+        } else if (response.status === 403) {
+          console.warn('Forbidden: Check x-api-key configuration');
+        }
+      } catch {
+        errorMessage = text.slice(0, 50) || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
-    
-    return data;
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Invalid response format from ${endpoint}: ${text.slice(0, 50)}...`);
+    }
+
+    return await response.json();
   } catch (error: any) {
     console.error(`API Error (${endpoint}):`, error);
-    
-    // If server is not available, fallback to local storage for development
-    if (!navigator.onLine || error.message.includes('Failed to fetch')) {
-      // Use local storage for persistence in development when API is unavailable
-      if (endpoint === 'auth/login') {
-        return mockLoginResponse(options.body ? JSON.parse(options.body as string) : {});
-      }
-      
-      if (endpoint === 'auth/register') {
-        return mockRegisterResponse(options.body ? JSON.parse(options.body as string) : {});
-      }
-      
-      if (endpoint === 'auth/me') {
-        return mockCurrentUserResponse();
-      }
-      
-      if (endpoint === 'posts' && options.method === 'GET') {
-        return getLocalPosts();
-      }
-      
-      if (endpoint === 'posts' && options.method === 'POST') {
-        return saveLocalPost(options.body ? JSON.parse(options.body as string) : {});
-      }
-      
-      if (endpoint === 'stories') {
-        return mockStoriesResponse();
-      }
-      
-      if (endpoint.includes('posts/') && endpoint.includes('/like') && options.method === 'POST') {
-        const postId = endpoint.split('/')[1];
-        return likeLocalPost(postId);
-      }
-      
-      if (endpoint.includes('posts/') && endpoint.includes('/comments') && options.method === 'POST') {
-        const postId = endpoint.split('/')[1];
-        const content = options.body ? JSON.parse(options.body as string).content : '';
-        return commentLocalPost(postId, content);
-      }
-      
-      if (endpoint.includes('posts/') && endpoint.includes('/comments') && options.method === 'GET') {
-        const postId = endpoint.split('/')[1];
-        return getLocalComments(postId);
-      }
-      
-      if (endpoint === 'events' && options.method === 'GET') {
-        return getLocalEvents();
-      }
-      
-      if (endpoint === 'products' && options.method === 'GET') {
-        return getLocalProducts();
-      }
-    }
-    
-    // Re-throw for other endpoints that don't have mock data
     throw error;
   }
 };
@@ -107,7 +76,7 @@ export const registerUser = async (name: string, email: string, password: string
   });
 };
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (): Promise<User> => {
   return fetchAPI('auth/me');
 };
 
@@ -118,8 +87,72 @@ export const updateProfile = async (userData: Partial<User>) => {
   });
 };
 
+
+// Messaging APIs
+export const createConversation = async (receiverId: string): Promise<Conversation> => {
+  if (!receiverId || !/^[0-9a-fA-F]{24}$/.test(receiverId)) {
+    throw new Error('Invalid receiver ID');
+  }
+  console.log('Sending createConversation request with receiverId:', receiverId);
+  return fetchAPI('messages/conversation', {
+    method: 'POST',
+    body: JSON.stringify({ receiverId }),
+  });
+};
+
+export const sendMessage = async (data: {
+  conversationId: string;
+  content: string;
+  product?: {
+    _id: string;
+    title: string;
+    price: number | null;
+    image: string | null;
+    condition: string | null;
+    category: string | null;
+  };
+  isAIResponse?: boolean;
+}): Promise<Message> => {
+  console.log('Sending message request:', data);
+  const response = await fetchAPI('messages', {
+    method: 'POST',
+    body: JSON.stringify({
+      conversationId: data.conversationId,
+      content: data.content,
+      product: data.product || null,
+      isAIResponse: data.isAIResponse || false,
+    }),
+  });
+  console.log('Message sent response:', response);
+  return response;
+};
+
+export const getConversations = async (): Promise<Conversation[]> => {
+  return fetchAPI('messages/conversations');
+};
+
+export const getMessages = async (conversationId: string): Promise<Message[]> => {
+  return fetchAPI(`messages/conversation/${conversationId}`);
+};
+
+export const markMessagesAsRead = async (conversationId: string): Promise<void> => {
+  console.log('Marking messages as read for conversation:', conversationId);
+  return fetchAPI(`messages/conversation/${conversationId}/read`, {
+    method: 'POST',
+  });
+};
+
+
+// Users APIs (for NewConversationModal search)
+export const searchUsers = async (query: string = ''): Promise<User[]> => {
+  // Assuming your backend supports a search query on /users/home
+  return fetchAPI('users/home', {
+    method: 'GET',
+    // Add query param if your backend supports it; otherwise, filter client-side
+  });
+};
 // Posts APIs
-export const getPosts = async () => {
+export const getPosts = async (): Promise<Post[]> => {
   return fetchAPI('posts');
 };
 
@@ -136,28 +169,37 @@ export const likePost = async (postId: string) => {
   });
 };
 
-export const commentOnPost = async (postId: string, content: string, parentId?: string) => {
-  try {
-    const result = await fetchAPI(`posts/${postId}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ content, parentId }),
-    });
-    return result;
-  } catch (error) {
-    console.error('Error posting comment:', error);
-    // Fall back to local comments if API fails
-    return commentLocalPost(postId, content, parentId);
-  }
-};
 
-export const getComments = async (postId: string) => {
+// src/services/comment-api.ts
+export const getEventComments = async (eventId: string): Promise<Comment[]> => {
   try {
-    const result = await fetchAPI(`posts/${postId}/comments`);
-    return result;
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    // Fall back to local comments if API fails
-    return getLocalComments(postId);
+    const response = await fetchAPI(`events/${eventId}/comments`, { method: "GET" });
+    const comments = response.data || response;
+    console.log("Event comments from server:", comments);
+    return comments.map((comment: any) => ({
+      _id: comment._id || `comment-${Date.now()}`,
+      postId: eventId,
+      userId: comment.user_id?._id || comment.user_id || "unknown",
+      content: comment.content || "",
+      likes: Array.isArray(comment.likes)
+        ? comment.likes.map((id: any) => id.toString())
+        : [],
+      parentId: comment.parentId || null,
+      mentions: comment.mentions || [],
+      createdAt: comment.createdAt || new Date().toISOString(),
+      user: {
+        _id: comment.user_id?._id || comment.user_id || "unknown",
+        name: comment.user_id?.name || comment.user_id?.username || "Anonymous",
+        avatar: comment.user_id?.avatar
+          ? `${import.meta.env.VITE_IMAGE_URL || "http://localhost:5000"}${comment.user_id.avatar}`
+          : "https://i.pravatar.cc/300",
+        username: comment.user_id?.username || "anonymous",
+      },
+      replies: comment.replies || [],
+    }));
+  } catch (error: any) {
+    console.error(`Failed to fetch comments for event ${eventId}:`, error.message);
+    throw error;
   }
 };
 
@@ -174,62 +216,96 @@ export const sharePost = async (postId: string) => {
 };
 
 // Stories APIs
-export const getStories = async () => {
-  return fetchAPI('stories');
+export const getStories = async (): Promise<Story[]> => {
+  return fetchAPI('stories/all');
 };
 
-export const createStory = async (story: Partial<Story>) => {
+export const createStory = async (story: Partial<Story> & { imageFile: File }) => { // Changed imageFile to required File
+  console.log('createStory input:', story);
+  const formData = new FormData();
+  
+  if (!(story.imageFile instanceof File)) {
+    throw new Error('imageFile must be a File object');
+  }
+  console.log('Appending image:', story.imageFile.name, story.imageFile.size, story.imageFile.type);
+  formData.append('image', story.imageFile);
+  
+  formData.append('text', story.text || '');
+  formData.append('textColor', story.textColor || '#ffffff');
+
+  console.log('FormData contents:');
+  for (const [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+  }
+
   return fetchAPI('stories', {
     method: 'POST',
-    body: JSON.stringify(story),
+    body: formData,
   });
 };
 
-export const viewStory = async (storyId: string) => {
+export const viewStory = async (storyId: string): Promise<Story> => {
   return fetchAPI(`stories/${storyId}/view`, {
-    method: 'POST',
+    method: 'GET',
   });
 };
 
-// Messages APIs
-export const getConversations = async () => {
-  return fetchAPI('conversations');
+export const editStory = async (storyId: string, updatedStory: Partial<Story> & { imageFile?: File }) => {
+  const formData = new FormData();
+  if (updatedStory.imageFile) {
+    formData.append('image', updatedStory.imageFile);
+  }
+  if (updatedStory.text !== undefined) {
+    formData.append('text', updatedStory.text); // Ensure text is always sent
+  }
+  if (updatedStory.textColor !== undefined) {
+    formData.append('textColor', updatedStory.textColor);
+  }
+
+  console.log('Sending edit request with FormData:');
+  for (const [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+  }
+
+  const response = await fetchAPI(`stories/${storyId}`, {
+    method: 'PUT',
+    body: formData,
+  });
+
+  console.log('Edit story response:', response);
+  return response;
 };
 
-export const getMessages = async (conversationId: string) => {
-  return fetchAPI(`conversations/${conversationId}/messages`);
-};
 
-export const sendMessage = async (conversationId: string, content: string) => {
-  return fetchAPI(`conversations/${conversationId}/messages`, {
-    method: 'POST',
-    body: JSON.stringify({ content }),
+export const deleteStory = async (storyId: string) => {
+  return fetchAPI(`stories/${storyId}`, {
+    method: 'DELETE',
   });
 };
 
-export const createConversation = async (receiverId: string) => {
-  return fetchAPI('conversations', {
-    method: 'POST',
-    body: JSON.stringify({ receiverId }),
-  });
-};
 
 // Users APIs
-export const getUsers = async () => {
+export const getUsers = async (): Promise<User[]> => {
   return fetchAPI('users');
 };
 
-// Products APIs (filtered posts with type=product)
-export const getProducts = async () => {
+// Products APIs
+export const getProducts = async (): Promise<ProductPost[]> => {
   return fetchAPI('products');
 };
 
-// Events APIs (filtered posts with type=event)
-export const getEvents = async () => {
+// Events APIs
+export const getEvents = async (): Promise<EventPost[]> => {
   return fetchAPI('events');
 };
 
-// Upload image
+export const getEventById = async (eventId: string): Promise<EventPost> => {
+  return fetchAPI(`events/${eventId}`, {
+    method: 'GET',
+  });
+};
+
+// Upload image (standalone, if needed)
 export const uploadImage = async (file: File) => {
   const formData = new FormData();
   formData.append('image', file);
@@ -241,6 +317,7 @@ export const uploadImage = async (file: File) => {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'x-api-key': API_KEY,
       },
       body: formData,
     });
@@ -254,394 +331,361 @@ export const uploadImage = async (file: File) => {
     return data;
   } catch (error) {
     console.error('Error uploading image:', error);
-    // For development, create mock image URL
     return { url: `https://source.unsplash.com/random/800x600?t=${Date.now()}` };
   }
 };
 
-// Local storage persistence helpers
-const getLocalPosts = () => {
+// Local storage helpers
+const getLocalPosts = (): Post[] => {
   try {
     const posts = localStorage.getItem('posts');
     return posts ? JSON.parse(posts) : [];
-  } catch (error) {
-    console.error('Error getting posts from localStorage', error);
+  } catch {
     return [];
   }
 };
 
 const saveLocalPost = (postData: any) => {
-  try {
-    const user = authService.getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated to create a post');
-    }
-    
-    const posts = getLocalPosts();
-    
-    const newPost = {
-      _id: 'post-' + Date.now(),
-      userId: user._id,
-      user: {
-        _id: user._id,
-        name: user.name,
-        avatar: user.avatar
-      },
-      content: postData.content || postData.description || '',
-      image: postData.image,
-      likes: [],
-      comments: 0,
-      createdAt: new Date().toISOString(),
-      ...postData
-    };
-    
-    const updatedPosts = [newPost, ...posts];
-    localStorage.setItem('posts', JSON.stringify(updatedPosts));
-    
-    return newPost;
-  } catch (error) {
-    console.error('Error saving post to localStorage', error);
-    throw new Error('Failed to save post locally');
-  }
+  const user = authService.getCurrentUser();
+  if (!user) throw new Error('User must be authenticated');
+  
+  const posts = getLocalPosts();
+  const newPost = {
+    _id: `post-${Date.now()}`,
+    userId: user._id,
+    user: { _id: user._id, name: user.name, avatar: user.avatar },
+    content: postData.content || '',
+    image: postData.image,
+    likes: [],
+    comments: 0,
+    createdAt: new Date().toISOString(),
+    ...postData,
+  };
+  
+  const updatedPosts = [newPost, ...posts];
+  localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  return newPost;
 };
 
 const likeLocalPost = (postId: string) => {
-  try {
-    const user = authService.getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated to like a post');
+  const user = authService.getCurrentUser();
+  if (!user) throw new Error('User must be authenticated');
+  
+  const posts = getLocalPosts();
+  const updatedPosts = posts.map((post: any) => {
+    if (post._id === postId) {
+      const likes = Array.isArray(post.likes) ? post.likes : [];
+      const userLiked = likes.includes(user._id);
+      return {
+        ...post,
+        likes: userLiked ? likes.filter((id: string) => id !== user._id) : [...likes, user._id],
+      };
     }
-    
-    const posts = getLocalPosts();
-    const updatedPosts = posts.map((post: any) => {
-      if (post._id === postId) {
-        const likes = Array.isArray(post.likes) ? post.likes : [];
-        const userLiked = likes.includes(user._id);
-        
-        return {
-          ...post,
-          likes: userLiked ? likes.filter((id: string) => id !== user._id) : [...likes, user._id]
-        };
-      }
-      return post;
-    });
-    
-    localStorage.setItem('posts', JSON.stringify(updatedPosts));
-    
-    const updatedPost = updatedPosts.find((post: any) => post._id === postId);
-    return updatedPost || { error: 'Post not found' };
-  } catch (error) {
-    console.error('Error liking post in localStorage', error);
-    throw new Error('Failed to like post locally');
-  }
+    return post;
+  });
+  
+  localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  return updatedPosts.find((post: any) => post._id === postId) || { error: 'Post not found' };
 };
 
-const getLocalComments = (postId: string) => {
+const getLocalComments = (postId: string): Comment[] => {
   try {
-    // Try to get comments from localStorage
     const commentsJson = localStorage.getItem(`comments_${postId}`);
-    let comments = commentsJson ? JSON.parse(commentsJson) : [];
-    
-    // Get the current user
+    const comments = commentsJson ? JSON.parse(commentsJson) : [];
     const user = authService.getCurrentUser();
     
-    // Organize comments into a hierarchy (parent-child)
-    const parentComments: any[] = [];
-    const childComments: {[key: string]: any[]} = {};
-    
-    comments.forEach((comment: any) => {
-      // Set up the proper user reference
-      const commentUser = comment.user || {
-        _id: comment.userId,
-        name: 'Unknown User',
-        avatar: 'https://i.pravatar.cc/300',
-      };
-      
-      // Check if the current user has liked the comment
-      const likes = Array.isArray(comment.likes) ? comment.likes : [];
-      const isLiked = user && likes.includes(user._id);
-      
-      const processedComment = {
-        ...comment,
-        user: commentUser,
-        liked: isLiked
-      };
-      
-      if (comment.parentId) {
-        // This is a reply
-        if (!childComments[comment.parentId]) {
-          childComments[comment.parentId] = [];
-        }
-        childComments[comment.parentId].push(processedComment);
-      } else {
-        // This is a parent comment
-        parentComments.push(processedComment);
-      }
-    });
-    
-    // Attach replies to their parent comments
-    parentComments.forEach(comment => {
-      comment.replies = childComments[comment._id] || [];
-    });
-    
-    return parentComments;
-  } catch (error) {
-    console.error('Error getting comments from localStorage', error);
+    return comments.map((comment: any) => ({
+      ...comment,
+      user: comment.user || { _id: comment.userId, name: 'Unknown', avatar: 'https://i.pravatar.cc/300' },
+      liked: user && Array.isArray(comment.likes) ? comment.likes.includes(user._id) : false,
+    }));
+  } catch {
     return [];
   }
 };
 
 const commentLocalPost = (postId: string, content: string, parentId?: string) => {
-  try {
-    const user = authService.getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated to comment on a post');
+  const user = authService.getCurrentUser();
+  if (!user) throw new Error('User must be authenticated');
+  
+  const posts = getLocalPosts();
+  const updatedPosts = posts.map((post: any) => {
+    if (post._id === postId) {
+      return { ...post, comments: (post.comments || 0) + 1 };
     }
-    
-    // Update post comment count
-    const posts = getLocalPosts();
-    const updatedPosts = posts.map((post: any) => {
-      if (post._id === postId) {
-        return {
-          ...post,
-          comments: (post.comments || 0) + 1
-        };
-      }
-      return post;
-    });
-    
-    localStorage.setItem('posts', JSON.stringify(updatedPosts));
-    
-    // Save the new comment
-    const comments = getLocalComments(postId);
-    const newComment = {
-      _id: `comment-${Date.now()}`,
-      postId,
-      userId: user._id,
-      user: {
-        _id: user._id,
-        name: user.name,
-        avatar: user.avatar
-      },
-      content,
-      parentId: parentId || null,
-      createdAt: new Date().toISOString(),
-      likes: []
-    };
-    
-    const updatedComments = [newComment, ...comments];
-    localStorage.setItem(`comments_${postId}`, JSON.stringify(updatedComments));
-    
-    return newComment;
-  } catch (error) {
-    console.error('Error commenting on post in localStorage', error);
-    throw new Error('Failed to comment on post locally');
-  }
-};
-
-const getLocalEvents = () => {
-  try {
-    const events = localStorage.getItem('events');
-    if (events) {
-      return JSON.parse(events);
-    }
-    
-    // If no events exist yet, create sample data
-    const sampleEvents = [
-      {
-        _id: 'event-1',
-        userId: 'admin',
-        user: { _id: 'admin', name: 'USM Events', avatar: 'https://i.pravatar.cc/300?u=admin@usm.edu' },
-        type: 'event',
-        title: 'Spring Festival',
-        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        location: 'M.M. Roberts Stadium',
-        content: 'Join us for the annual Spring Festival with food, music, and games!',
-        image: 'https://source.unsplash.com/random/800x600/?festival',
-        likes: [],
-        comments: 0,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'event-2',
-        userId: 'admin',
-        user: { _id: 'admin', name: 'USM Events', avatar: 'https://i.pravatar.cc/300?u=admin@usm.edu' },
-        type: 'event',
-        title: 'Graduation Ceremony',
-        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        location: 'Reed Green Coliseum',
-        content: 'Commencement ceremony for the graduating class of 2023.',
-        image: 'https://source.unsplash.com/random/800x600/?graduation',
-        likes: [],
-        comments: 0,
-        createdAt: new Date().toISOString()
-      }
-    ];
-    
-    localStorage.setItem('events', JSON.stringify(sampleEvents));
-    return sampleEvents;
-  } catch (error) {
-    console.error('Error getting events from localStorage', error);
-    return [];
-  }
-};
-
-const getLocalProducts = () => {
-  try {
-    const products = localStorage.getItem('products');
-    if (products) {
-      return JSON.parse(products);
-    }
-    
-    // If no products exist yet, create sample data
-    const sampleProducts = [
-      {
-        _id: 'product-1',
-        userId: 'seller1',
-        user: { _id: 'seller1', name: 'John Student', avatar: 'https://i.pravatar.cc/300?u=seller1@usm.edu' },
-        type: 'product',
-        productName: 'Calculus Textbook',
-        price: '$45',
-        category: 'Books',
-        condition: 'Like New',
-        status: 'instock',
-        content: 'Calculus: Early Transcendentals 8th Edition. Barely used.',
-        image: 'https://source.unsplash.com/random/800x600/?textbook',
-        likes: [],
-        comments: 0,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'product-2',
-        userId: 'seller2',
-        user: { _id: 'seller2', name: 'Jane Student', avatar: 'https://i.pravatar.cc/300?u=seller2@usm.edu' },
-        type: 'product',
-        productName: 'USM Hoodie',
-        price: '$25',
-        category: 'Clothing',
-        condition: 'Good',
-        status: 'instock',
-        content: 'Size M, black USM hoodie. Worn a few times.',
-        image: 'https://source.unsplash.com/random/800x600/?hoodie',
-        likes: [],
-        comments: 0,
-        createdAt: new Date().toISOString()
-      }
-    ];
-    
-    localStorage.setItem('products', JSON.stringify(sampleProducts));
-    return sampleProducts;
-  } catch (error) {
-    console.error('Error getting products from localStorage', error);
-    return [];
-  }
-};
-
-const markLocalEventInterested = (eventId: string) => {
-  try {
-    const user = authService.getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated to mark interest in an event');
-    }
-    
-    const posts = getLocalPosts();
-    const updatedPosts = posts.map((post: any) => {
-      if (post._id === eventId && post.type === 'event') {
-        const interested = Array.isArray(post.interested) ? post.interested : [];
-        const userInterested = interested.includes(user._id);
-        
-        return {
-          ...post,
-          interested: userInterested ? interested.filter((id: string) => id !== user._id) : [...interested, user._id]
-        };
-      }
-      return post;
-    });
-    
-    localStorage.setItem('posts', JSON.stringify(updatedPosts));
-    
-    const updatedEvent = updatedPosts.find((post: any) => post._id === eventId);
-    return updatedEvent || { error: 'Event not found' };
-  } catch (error) {
-    console.error('Error marking event interest in localStorage', error);
-    throw new Error('Failed to mark interest locally');
-  }
-};
-
-const shareLocalPost = (postId: string) => {
-  try {
-    const posts = getLocalPosts();
-    const updatedPosts = posts.map((post: any) => {
-      if (post._id === postId) {
-        return {
-          ...post,
-          shares: (post.shares || 0) + 1
-        };
-      }
-      return post;
-    });
-    
-    localStorage.setItem('posts', JSON.stringify(updatedPosts));
-    
-    const updatedPost = updatedPosts.find((post: any) => post._id === postId);
-    return updatedPost || { error: 'Post not found' };
-  } catch (error) {
-    console.error('Error sharing post in localStorage', error);
-    throw new Error('Failed to share post locally');
-  }
-};
-
-// Mock data for development
-const mockLoginResponse = (credentials: { email: string, password: string }) => {
-  const mockUser = {
-    _id: "user-" + Date.now(),
-    name: "Demo User",
-    email: credentials.email,
-    avatar: "https://i.pravatar.cc/300?u=" + credentials.email,
-    role: "user",
-    createdAt: new Date().toISOString()
+    return post;
+  });
+  localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  
+  const comments = getLocalComments(postId);
+  const newComment = {
+    _id: `comment-${Date.now()}`,
+    postId,
+    userId: user._id,
+    user: { _id: user._id, name: user.name, avatar: user.avatar },
+    content,
+    parentId: parentId || null,
+    createdAt: new Date().toISOString(),
+    likes: [],
   };
   
-  return {
-    token: "mock-jwt-token-" + Date.now(),
-    user: mockUser
+  const updatedComments = [newComment, ...comments];
+  localStorage.setItem(`comments_${postId}`, JSON.stringify(updatedComments));
+  return newComment;
+};
+
+const getLocalStories = (): Story[] => {
+  try {
+    const stories = localStorage.getItem('stories');
+    return stories ? JSON.parse(stories) : [];
+  } catch {
+    return [];
+  }
+};
+
+const viewLocalStory = (storyId: string) => {
+  const user = authService.getCurrentUser();
+  if (!user) throw new Error('User must be authenticated');
+  
+  const stories = getLocalStories();
+  const updatedStories = stories.map((story: any) => {
+    if (story._id === storyId) {
+      const views = Array.isArray(story.views) ? story.views : [];
+      if (!views.includes(user._id)) {
+        views.push(user._id);
+      }
+      return { ...story, views };
+    }
+    return story;
+  });
+  
+  localStorage.setItem('stories', JSON.stringify(updatedStories));
+  return updatedStories.find((story: any) => story._id === storyId) || { error: 'Story not found' };
+};
+
+const getLocalEvents = (): EventPost[] => {
+  return getLocalPosts().filter((post: any) => post.type === 'event');
+};
+
+const getLocalEventById = (eventId: string): EventPost => {
+  const events = getLocalEvents();
+  const event = events.find((e: any) => e._id === eventId);
+  return event || {
+    _id: eventId,
+    event_title: 'Offline Event',
+    event_details: 'This event is available offline.',
+    event_date: new Date().toISOString(),
+    event_location: 'Unknown Location',
+    user_id: { _id: 'offline-user', name: 'Offline User', avatar: 'https://i.pravatar.cc/300' },
+    interested: [],
+    likes: [],
+    comments: 0,
+    createdAt: new Date().toISOString(),
+    type: 'event',
   };
 };
 
-const mockRegisterResponse = (userData: { name: string, email: string, password: string }) => {
+const getLocalProducts = (): ProductPost[] => {
+  return getLocalPosts().filter((post: any) => post.type === 'product');
+};
+
+// Mock data
+const mockLoginResponse = (credentials: { email: string; password: string }) => {
   const mockUser = {
-    _id: "user-" + Date.now(),
+    _id: `user-${Date.now()}`,
+    name: 'Demo User',
+    email: credentials.email,
+    avatar: `https://i.pravatar.cc/300?u=${credentials.email}`,
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+  return { token: `mock-jwt-${Date.now()}`, user: mockUser };
+};
+
+const mockRegisterResponse = (userData: { name: string; email: string; password: string }) => {
+  const mockUser = {
+    _id: `user-${Date.now()}`,
     name: userData.name,
     email: userData.email,
-    avatar: "https://i.pravatar.cc/300?u=" + userData.email,
-    role: "user",
-    createdAt: new Date().toISOString()
+    avatar: `https://i.pravatar.cc/300?u=${userData.email}`,
+    role: 'user',
+    createdAt: new Date().toISOString(),
   };
-  
-  return {
-    token: "mock-jwt-token-" + Date.now(),
-    user: mockUser
-  };
+  return { token: `mock-jwt-${Date.now()}`, user: mockUser };
 };
 
-const mockCurrentUserResponse = () => {
+const mockCurrentUserResponse = (): User => {
   const storedUser = authService.getCurrentUser();
-  if (storedUser) {
-    return storedUser;
-  }
-  
-  const defaultUser = {
-    _id: "user-" + Date.now(),
-    name: "Demo User",
-    email: "demo@example.com",
-    avatar: "https://i.pravatar.cc/300?u=demo@example.com",
-    role: "user",
-    createdAt: new Date().toISOString()
+  return storedUser || {
+    _id: `user-${Date.now()}`,
+    name: 'Demo User',
+    email: 'demo@example.com',
+    avatar: 'https://i.pravatar.cc/300?u=demo@example.com',
+    role: 'user',
+    createdAt: new Date().toISOString(),
   };
-  
-  return defaultUser;
 };
 
-const mockStoriesResponse = () => {
-  return [];
+// new comment apis
+// Comment APIs
+// Products APIs
+export const commentOnProduct = async (
+  productId: string,
+  content: string,
+  parentId?: string,
+  mentions?: string[]
+): Promise<Comment> => {
+  if (!productId || !content.trim()) {
+    throw new Error('Product ID and content are required');
+  }
+  console.log('Posting comment on product:', { productId, content, parentId, mentions });
+  const response = await fetchAPI(`products/${productId}/comment`, {
+    method: 'POST',
+    body: JSON.stringify({ content, parentId, mentions: mentions || [] }),
+  });
+  console.log('Product comment response:', response);
+
+  const comment = response.data; // Backend now returns the new comment directly
+  if (!comment || !comment.user_id) {
+    console.error('Invalid comment response:', response);
+    throw new Error('Invalid comment data');
+  }
+
+  return {
+    _id: comment._id || `comment-${Date.now()}`,
+    postId: productId,
+    userId: comment.user_id._id || '',
+    content: comment.content || content,
+    likes: comment.likes || [],
+    parentId: comment.parentId || null,
+    mentions: comment.mentions || [],
+    createdAt: comment.createdAt || new Date().toISOString(),
+    user: {
+      _id: comment.user_id._id || '',
+      name: comment.user_id.name || comment.user_id.username || 'Anonymous',
+      avatar: comment.user_id.avatar
+        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        : 'https://i.pravatar.cc/300',
+      username: comment.user_id.username || 'anonymous',
+    },
+    replies: comment.replies || [],
+  };
+};
+
+
+
+export const likeCommentOnProduct = async (productId: string, commentId: string): Promise<Comment> => {
+  if (!productId || !commentId) {
+    throw new Error('Product ID and comment ID are required');
+  }
+  console.log('Liking comment on product:', { productId, commentId });
+  return fetchAPI(`products/${productId}/comments/${commentId}/like`, {
+    method: 'POST',
+  });
+};
+
+// Posts APIs
+export const commentOnPost = async (
+  postId: string,
+  content: string,
+  parentId?: string,
+  mentions?: string[]
+): Promise<Comment> => {
+  if (!postId || !content.trim()) {
+    throw new Error('Post ID and content are required');
+  }
+  const response = await fetchAPI(`posts/${postId}/comment`, {
+    method: 'POST',
+    body: JSON.stringify({ content, parentId, mentions: mentions || [] }),
+  });
+
+  const comment = response.data;
+  if (!comment || !comment.user_id) {
+    throw new Error('Invalid comment data');
+  }
+
+  return {
+    _id: comment._id,
+    postId,
+    userId: comment.user_id._id,
+    content: comment.content,
+    likes: comment.likes || [],
+    parentId: comment.parentId || null,
+    mentions: comment.mentions || [],
+    createdAt: comment.createdAt,
+    user: {
+      _id: comment.user_id._id,
+      name: comment.user_id.name || comment.user_id.username,
+      avatar: comment.user_id.avatar
+        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        : 'https://i.pravatar.cc/300',
+      username: comment.user_id.username,
+    },
+    replies: comment.replies || [],
+  };
+};
+
+export const likeCommentOnPost = async (postId: string, commentId: string): Promise<Comment> => {
+  if (!postId || !commentId) {
+    throw new Error('Post ID and comment ID are required');
+  }
+  return fetchAPI(`posts/${postId}/comments/${commentId}/like`, {
+    method: 'POST',
+  });
+};
+
+// Events APIs
+
+export const commentOnEvent = async (
+  eventId: string,
+  content: string,
+  parentId?: string,
+  mentions?: string[]
+): Promise<Comment> => {
+  if (!eventId || !content.trim()) {
+    throw new Error('Event ID and content are required');
+  }
+  console.log('Posting comment on event:', { eventId, content, parentId, mentions });
+  const response = await fetchAPI(`events/${eventId}/comment`, {
+    method: 'POST',
+    body: JSON.stringify({ content, parentId, mentions: mentions || [] }),
+  });
+  console.log('Event comment response:', response);
+
+  const comment = response.data; // Backend now returns the new comment directly
+  if (!comment || !comment.user_id) {
+    console.error('Invalid comment response:', response);
+    throw new Error('Invalid comment data');
+  }
+
+  return {
+    _id: comment._id || `comment-${Date.now()}`,
+    postId: eventId,
+    userId: comment.user_id._id || '',
+    content: comment.content || content,
+    likes: comment.likes || [],
+    parentId: comment.parentId || null,
+    mentions: comment.mentions || [],
+    createdAt: comment.createdAt || new Date().toISOString(),
+    user: {
+      _id: comment.user_id._id || '',
+      name: comment.user_id.name || comment.user_id.username || 'Anonymous',
+      avatar: comment.user_id.avatar
+        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        : 'https://i.pravatar.cc/300',
+      username: comment.user_id.username || 'anonymous',
+    },
+    replies: comment.replies || [],
+  };
+};
+
+
+export const likeCommentOnEvent = async (eventId: string, commentId: string): Promise<Comment> => {
+  if (!eventId || !commentId) {
+    throw new Error('Event ID and comment ID are required');
+  }
+  console.log('Liking comment on event:', { eventId, commentId });
+  return fetchAPI(`events/${eventId}/comments/${commentId}/like`, {
+    method: 'POST',
+  });
 };

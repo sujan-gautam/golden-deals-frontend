@@ -1,99 +1,110 @@
-
 import { User } from '../types/user';
 import { toast } from '@/components/ui/use-toast';
+import { loginUser, registerUser, getCurrentUser as getCurrentUserAPI } from './api';
 
-// localStorage keys
 const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
-const REGISTERED_USERS_KEY = 'registeredUsers';
 
-// Types
-type RegisteredUser = {
-  email: string;
-  password: string;
-};
-
-type AuthResponse = {
-  token: string;
-  user: User;
-};
-
-// Get registered users from localStorage
-export const getRegisteredUsers = (): RegisteredUser[] => {
+// Decode JWT to check expiry
+const isTokenExpired = (token: string): boolean => {
   try {
-    const users = localStorage.getItem(REGISTERED_USERS_KEY);
-    return users ? JSON.parse(users) : [];
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000; // Convert to milliseconds
+    // console.log('Token expiry:', new Date(exp), 'Current time:', new Date());
+    return Date.now() > exp;
   } catch (error) {
-    console.error('Error parsing registered users', error);
-    return [];
+    console.error('Error decoding token:', error);
+    return true; // Assume expired if decoding fails
   }
 };
 
-// Save a registered user to localStorage
-export const saveRegisteredUser = (email: string, password: string): void => {
+export const getToken = (): string | null => {
   try {
-    const users = getRegisteredUsers();
-    const existingUser = users.find(user => user.email === email);
-    
-    if (!existingUser) {
-      const updatedUsers = [...users, { email, password }];
-      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(updatedUsers));
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    // Optional: Verify token hasn't expired
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (Date.now() >= payload.exp * 1000) {
+      localStorage.removeItem('token');
+      return null;
     }
-  } catch (error) {
-    console.error('Error saving registered user', error);
-    throw new Error('Failed to register user');
-  }
-};
 
-// Check if a user exists with given credentials
-export const isRegisteredUser = (email: string, password: string): boolean => {
-  const users = getRegisteredUsers();
-  return users.some(user => user.email === email && user.password === password);
-};
-
-// Get the current authenticated user
-export const getCurrentUser = (): User | null => {
-  try {
-    const storedUser = localStorage.getItem(USER_KEY);
-    return storedUser ? JSON.parse(storedUser) : null;
+    return token;
   } catch (error) {
-    console.error('Error getting current user', error);
+    console.error('Error getting token:', error);
+    localStorage.removeItem('token');
     return null;
   }
 };
 
-// Get the auth token
-export const getToken = (): string | null => {
-  return localStorage.getItem(TOKEN_KEY);
+export const setToken = (token: string): void => {
+  localStorage.setItem('token', token);
 };
 
-// Save auth data (token and user)
-export const saveAuthData = (response: AuthResponse): void => {
+export const clearToken = (): void => {
+  localStorage.removeItem('token');
+};
+
+export const login = async (email: string, password: string): Promise<{ token: string; user: User }> => {
+  try {
+    const response = await loginUser(email, password);
+    saveAuthData(response);
+    console.log('Logged in, token saved:', response.token);
+    return response;
+  } catch (error: any) {
+    console.error('Login failed:', error);
+    toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
+    throw error;
+  }
+};
+
+export const register = async (name: string, email: string, password: string): Promise<{ token: string; user: User }> => {
+  try {
+    const response = await registerUser(name, email, password);
+    saveAuthData(response);
+    return response;
+  } catch (error: any) {
+    console.error('Registration failed:', error);
+    toast({ title: 'Registration Failed', description: error.message, variant: 'destructive' });
+    throw error;
+  }
+};
+
+export const getCurrentUser = async (): Promise<User | null> => {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const user = await getCurrentUserAPI();
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    return user;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return localStorage.getItem(USER_KEY) ? JSON.parse(localStorage.getItem(USER_KEY)!) : null;
+  }
+};
+
+export const saveAuthData = (response: { token: string; user: User }): void => {
   localStorage.setItem(TOKEN_KEY, response.token);
   localStorage.setItem(USER_KEY, JSON.stringify(response.user));
 };
 
-// Clear auth data (for logout)
 export const clearAuthData = (): void => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 };
 
-// Update user profile data
 export const updateUserProfile = (userData: Partial<User>): User => {
   const currentUser = getCurrentUser();
-  
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
-  
   const updatedUser = { ...currentUser, ...userData };
   localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-  
   return updatedUser;
 };
 
-// Check if user is authenticated
 export const isAuthenticated = (): boolean => {
-  return !!getToken() && !!getCurrentUser();
+  return !!getToken();
 };

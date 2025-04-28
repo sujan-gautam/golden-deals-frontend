@@ -1,16 +1,18 @@
-
-import { Types } from 'mongoose';
-import { User } from './user';
-
 export interface Comment {
-  _id: string | Types.ObjectId;
-  postId: string | Types.ObjectId;
-  userId: string | Types.ObjectId;
+  _id: string;
+  postId: string;
+  userId: string;
   content: string;
-  likes: (string | Types.ObjectId)[];
-  parentId?: string | Types.ObjectId | null;
+  likes: string[];
+  parentId?: string | null;
+  mentions?: string[]; 
   createdAt: string;
-  user?: User;
+  user?: {
+    _id: string;
+    name: string;
+    avatar: string;
+    username: string;
+  };
   replies?: Comment[];
 }
 
@@ -20,10 +22,12 @@ export interface CommentDisplay {
     id: string;
     name: string;
     avatar: string;
+    username: string;
   };
   content: string;
   likes: number;
   liked: boolean;
   createdAt: string;
+  mentions?: string[];
   replies?: CommentDisplay[];
 }
