@@ -1,6 +1,3 @@
-"engines": {
-  "node": "20.x"
-},
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
@@ -12,6 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
