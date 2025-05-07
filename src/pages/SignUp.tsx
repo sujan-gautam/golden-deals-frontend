@@ -71,7 +71,7 @@ const SignUp = () => {
       const token = localStorage.getItem("token");
       if (token) {
         try {
-          const res = await api.get("/api/users/current", {
+          const res = await api.get("/users/current", {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -101,7 +101,7 @@ const SignUp = () => {
     setNotification(null);
 
     try {
-      const res = await api.post("/api/users/register", formData);
+      const res = await api.post("/users/register", formData);
       setNotification({ message: 'Registered Successfully! Redirecting...', type: 'success' });
       toast({
         title: 'Account created!',
