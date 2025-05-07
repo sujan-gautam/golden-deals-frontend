@@ -1,6 +1,5 @@
 {
-  "buildCommand": "npm install --legacy-peer-deps && npm run build",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
