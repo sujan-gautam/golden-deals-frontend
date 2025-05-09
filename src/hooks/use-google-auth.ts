@@ -14,7 +14,7 @@ export const useGoogleAuth = (): GoogleAuthType => {
 
   const googleLogin = () => {
     // Redirect to Google OAuth, handled by GoogleAuthButton
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL || 'https://golden-deals-frontend-production.up.railway.app/'}/api/auth/google`;
   };
 
   const googleLogout = () => {
