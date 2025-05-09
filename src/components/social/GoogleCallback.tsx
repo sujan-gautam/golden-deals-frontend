@@ -10,10 +10,11 @@ const GoogleCallback: React.FC = () => {
   const hasProcessed = useRef(false); // Prevent multiple executions
 
   useEffect(() => {
-    if (hasProcessed.current) return; // Skip if already processed
+    if (hasProcessed.current) return;
 
-    hasProcessed.current = true; // Mark as processed immediately
+    hasProcessed.current = true;
     console.log('GoogleCallback reached with params:', searchParams.toString());
+
     const token = searchParams.get('token');
     if (token) {
       handleGoogleLogin(token)
@@ -23,8 +24,8 @@ const GoogleCallback: React.FC = () => {
             title: 'Success',
             description: 'Signed in with Google successfully!',
           });
-          // Reload page to trigger useAuth's checkAuth
-          window.location.href = '/onboarding'; // Redirect to root to trigger reload
+          // SPA-friendly redirect (instead of full reload)
+          navigate('/onboarding', { replace: true });
         })
         .catch((error) => {
           console.error('Google login failed:', error);
@@ -46,7 +47,11 @@ const GoogleCallback: React.FC = () => {
     }
   }, [searchParams, navigate, toast]);
 
-  return <div>Loading...</div>;
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <p className="text-lg font-medium">Signing you in with Google...</p>
+    </div>
+  );
 };
 
 export default GoogleCallback;
