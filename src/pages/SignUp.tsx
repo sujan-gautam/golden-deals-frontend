@@ -8,8 +8,13 @@ import axios from 'axios';
 import { useToast } from '@/components/ui/use-toast';
 import GoogleAuthButton from '@/components/social/GoogleAuthButton';
 
+<<<<<<< HEAD
 const API_URL = import.meta.env.VITE_API_URL ;
 const API_KEY = import.meta.env.VITE_API_KEY;
+=======
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_KEY = import.meta.env.VITE_API_KEY || "mySuperSecretToken";
+>>>>>>> fb14da5be794e91299c308cc6ce4ac425e915d51
 
 const api = axios.create({
   baseURL: API_URL,
@@ -71,7 +76,7 @@ const SignUp = () => {
       const token = localStorage.getItem("token");
       if (token) {
         try {
-          const res = await api.get("/api/users/current", {
+          const res = await api.get("/users/current", {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -101,7 +106,7 @@ const SignUp = () => {
     setNotification(null);
 
     try {
-      const res = await api.post("/api/users/register", formData);
+      const res = await api.post("/users/register", formData);
       setNotification({ message: 'Registered Successfully! Redirecting...', type: 'success' });
       toast({
         title: 'Account created!',

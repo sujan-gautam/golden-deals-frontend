@@ -7,7 +7,11 @@ import * as authService from './authService';
 import { getToken } from './authService';
 
 // Use import.meta.env for Vite
+<<<<<<< HEAD
 const API_URL = import.meta.env.VITE_API_URL;
+=======
+const API_URL = import.meta.env.VITE_API_URL ;
+>>>>>>> fb14da5be794e91299c308cc6ce4ac425e915d51
 
 const API_KEY = import.meta.env.VITE_API_KEY;
 

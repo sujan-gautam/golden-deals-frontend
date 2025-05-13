@@ -7,7 +7,11 @@ interface GoogleAuthButtonProps {
 
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ label = 'Sign up with Google' }) => {
   const handleGoogleLogin = () => {
+<<<<<<< HEAD
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+=======
+    window.location.href = `${import.meta.env.VITE_API_URL || 'https://golden-deals-backend-production.up.railway.app/api'}/auth/google`;
+>>>>>>> fb14da5be794e91299c308cc6ce4ac425e915d51
   };
 
   return (
