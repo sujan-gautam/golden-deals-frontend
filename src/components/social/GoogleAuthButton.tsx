@@ -7,7 +7,7 @@ interface GoogleAuthButtonProps {
 
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ label = 'Sign up with Google' }) => {
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
   };
 
   return (

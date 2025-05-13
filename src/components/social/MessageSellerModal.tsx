@@ -43,7 +43,7 @@ const MessageSellerModal = ({ isOpen, onClose, seller, product }: MessageSellerM
   const navigate = useNavigate();
 
   // Use VITE_IMAGE_URL consistent with other components
-  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
   // Check if the current user is the seller
   const isOwnProduct = user && seller.id === user.id;

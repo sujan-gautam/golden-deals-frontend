@@ -23,7 +23,7 @@ app.use(express.json({ limit: '50mb' }));
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/usm_app');
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB Connected');
   } catch (err) {
     console.error('MongoDB Connection Error:', err);

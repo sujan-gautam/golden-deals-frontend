@@ -35,7 +35,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isUserScrolling = useRef(false);
 
-  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
   // Sync messages and join conversation
   useEffect(() => {

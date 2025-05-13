@@ -7,7 +7,7 @@ import * as authService from './authService';
 import { getToken } from './authService';
 
 // Use import.meta.env for Vite
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const API_KEY = import.meta.env.VITE_API_KEY;
 
@@ -191,7 +191,7 @@ export const getEventComments = async (eventId: string): Promise<Comment[]> => {
         _id: comment.user_id?._id || comment.user_id || "unknown",
         name: comment.user_id?.name || comment.user_id?.username || "Anonymous",
         avatar: comment.user_id?.avatar
-          ? `${import.meta.env.VITE_IMAGE_URL || "http://localhost:5000"}${comment.user_id.avatar}`
+          ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
           : "https://i.pravatar.cc/300",
         username: comment.user_id?.username || "anonymous",
       },
@@ -564,7 +564,7 @@ export const commentOnProduct = async (
       _id: comment.user_id._id || '',
       name: comment.user_id.name || comment.user_id.username || 'Anonymous',
       avatar: comment.user_id.avatar
-        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
         : 'https://i.pravatar.cc/300',
       username: comment.user_id.username || 'anonymous',
     },
@@ -617,7 +617,7 @@ export const commentOnPost = async (
       _id: comment.user_id._id,
       name: comment.user_id.name || comment.user_id.username,
       avatar: comment.user_id.avatar
-        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
         : 'https://i.pravatar.cc/300',
       username: comment.user_id.username,
     },
@@ -671,7 +671,7 @@ export const commentOnEvent = async (
       _id: comment.user_id._id || '',
       name: comment.user_id.name || comment.user_id.username || 'Anonymous',
       avatar: comment.user_id.avatar
-        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
         : 'https://i.pravatar.cc/300',
       username: comment.user_id.username || 'anonymous',
     },

@@ -64,7 +64,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 // API Setup
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5000";
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
 const SingleEvent = () => {
   const { id } = useParams<{ id: string }>();

@@ -202,7 +202,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const renderCount = useRef(0);
 
   // Consistent with ConversationList
-  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
   // Increment render count
   renderCount.current += 1;

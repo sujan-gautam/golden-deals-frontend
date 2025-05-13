@@ -18,7 +18,7 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 
 // Define the backend base URL
-const BASE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+const BASE_URL = import.meta.env.VITE_IMAGE_URL;
 
 const SearchPage: React.FC = () => {
   const location = useLocation();

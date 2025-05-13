@@ -55,7 +55,8 @@ const PostCard = ({ post, onLike, onComment, onShare, onInterested }: PostCardPr
   const user = post.user || post.user_id || { id: post.userId, name: 'Unknown', avatar: null };
   const userId = user.id || user._id || post.userId || 'unknown';
   const userName = user.username || user.name || 'Unknown';
-  const avatarSrc = user.avatar ? `http://localhost:5000${user.avatar}` : undefined;
+  const avatarSrc = user.avatar ? `${import.meta.env.VITE_IMAGE_URL}${user.avatar}` : undefined;
+
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);

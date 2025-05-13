@@ -28,10 +28,10 @@ import BrandedLikeButton from '@/components/social/BrandedLikeButton';
 import axios from 'axios';
 
 // API Configuration
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://localhost:5000/storage/products-pictures';
-const PROFILE_PICTURE_URL = import.meta.env.VITE_PROFILE_PICTURE_URL || 'http://localhost:5000';
-const API_KEY = import.meta.env.VITE_API_KEY || 'mySuperSecretToken';
+const API_URL = import.meta.env.VITE_API_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL;
+const PROFILE_PICTURE_URL = import.meta.env.VITE_IMAGE_URL;
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 const api = axios.create({
   baseURL: API_URL,

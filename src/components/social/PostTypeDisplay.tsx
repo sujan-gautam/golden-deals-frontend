@@ -38,9 +38,12 @@ import { useAuth } from '../../hooks/use-auth';
 import { saveItem, unsaveItem, getSavedItems } from '../../services/savedItem-api';
 import { useQueryClient } from '@tanstack/react-query';
 
-const BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const API_KEY = import.meta.env.VITE_API_KEY || 'mySuperSecretToken';
+const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+const API_URL = import.meta.env.VITE_API_URL;
+const API_KEY = import.meta.env.VITE_API_KEY;
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
+
+
 
 const api = axios.create({
   baseURL: API_URL,

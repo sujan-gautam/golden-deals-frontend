@@ -27,9 +27,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5000";
-const API_KEY = import.meta.env.VITE_API_KEY || "mySuperSecretToken";
+const API_URL = import.meta.env.VITE_API_URL;
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
+const API_KEY = import.meta.env.VITE_API_KEY ;
 
 const api = axios.create({
   baseURL: API_URL,

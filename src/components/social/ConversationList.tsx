@@ -36,7 +36,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const { socket, joinConversation } = useMessaging(); // Use MessagingProvider context
 
   // Use VITE_IMAGE_URL consistent with SocialLayout, Profile, and MessageThread
-  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+  const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
   // Fetch latest messages for conversations missing lastMessage and sort by updatedAt
   useEffect(() => {

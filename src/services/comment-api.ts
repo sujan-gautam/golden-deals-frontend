@@ -35,7 +35,7 @@ export const commentOnPost = async (
       _id: comment.user_id._id,
       name: comment.user_id.name || comment.user_id.username,
       avatar: comment.user_id.avatar
-        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
         : 'https://i.pravatar.cc/300',
       username: comment.user_id.username,
     },
@@ -82,7 +82,7 @@ export const commentOnProduct = async (
       _id: comment.user_id._id || '',
       name: comment.user_id.name || comment.user_id.username || 'Anonymous',
       avatar: comment.user_id.avatar
-        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
         : 'https://i.pravatar.cc/300',
       username: comment.user_id.username || 'anonymous',
     },
@@ -129,7 +129,7 @@ export const commentOnEvent = async (
       _id: comment.user_id._id || '',
       name: comment.user_id.name || comment.user_id.username || 'Anonymous',
       avatar: comment.user_id.avatar
-        ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+        ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
         : 'https://i.pravatar.cc/300',
       username: comment.user_id.username || 'anonymous',
     },
@@ -220,7 +220,7 @@ export const getComments = async (postId: string, type: 'post' | 'product' | 'ev
         _id: comment.user_id?._id || comment.user_id || 'unknown',
         name: comment.user_id?.name || comment.user_id?.username || 'Anonymous',
         avatar: comment.user_id?.avatar
-          ? `${import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000'}${comment.user_id.avatar}`
+          ? `${import.meta.env.VITE_IMAGE_URL}${comment.user_id.avatar}`
           : 'https://i.pravatar.cc/300',
         username: comment.user_id?.username || 'anonymous',
       },

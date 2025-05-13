@@ -12,9 +12,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 
-const BACKEND_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5000";
-const API_KEY = import.meta.env.VITE_API_KEY || "mySuperSecretToken";
+const BACKEND_BASE_URL = import.meta.env.VITE_API_URL;
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
+const API_KEY = import.meta.env.VITE_API_KEY ;
 
 // Axios instance with x-api-key header
 const api = axios.create({

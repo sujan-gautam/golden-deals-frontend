@@ -16,7 +16,7 @@ import { Post, ProductPost, EventPost } from '@/types/post';
 import { usePosts } from '@/hooks/use-posts';
 
 // Use Vite environment variables for image URL (aligned with usePosts)
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || 'http://localhost:5000';
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
 // Error Boundary
 interface ErrorBoundaryProps {

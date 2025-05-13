@@ -157,6 +157,11 @@ const App = () => (
                 <NotFound />
               </ProtectedRoute>
             } />
+            <Route path="/interested" element={
+              <ProtectedRoute>
+                <InterestedPage />
+              </ProtectedRoute>
+            } />
             
             <Route path="/admin/dashboard" element={
               <ProtectedRoute>

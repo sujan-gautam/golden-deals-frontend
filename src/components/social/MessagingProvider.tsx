@@ -12,7 +12,7 @@ interface MessagingContextType {
 
 const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_IMAGE_URL;
 
 export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);

@@ -15,9 +15,9 @@ const cardVariants = {
   tap: { scale: 0.98 },
 };
 
-const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '' // In production, assume relative paths work with proxy
-  : 'http://localhost:5000';
+const BASE_URL = import.meta.env.PROD 
+  ? '' 
+  : import.meta.env.VITE_IMAGE_URL; 
 
 const StoryItem = memo(({ story, index, onViewStory }: StoryItemProps) => {
   useEffect(() => {

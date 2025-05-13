@@ -18,7 +18,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5000/";
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

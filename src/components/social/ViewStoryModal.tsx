@@ -17,9 +17,9 @@ interface ViewStoryModalProps {
   onDelete: (storyId: string) => void;
 }
 
-const BASE_URL = import.meta.env.VITE_IMAGE_URL || (import.meta.env.MODE === 'production' 
+const BASE_URL = import.meta.env.PROD 
   ? '' 
-  : 'http://localhost:5000');
+  : import.meta.env.VITE_IMAGE_URL; 
 
 const ViewStoryModal: React.FC<ViewStoryModalProps> = ({
   isOpen,

@@ -20,9 +20,9 @@ import { BasePost, idToString } from "@/types/post";
 import { useAuth } from "@/hooks/use-auth";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5000";
-const API_KEY = import.meta.env.VITE_API_KEY || "mySuperSecretToken";
+const API_URL = import.meta.env.VITE_API_URL;
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
+const API_KEY = import.meta.env.VITE_API_KEY;
 const ICON_SIZE = "h-4 w-4";
 
 const api = axios.create({
