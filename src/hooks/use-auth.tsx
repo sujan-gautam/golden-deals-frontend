@@ -9,7 +9,7 @@ interface User {
   firstname: string;
   lastname: string;
   email: string;
-  avatar?: string; 
+  avatar?: string;
 }
 
 interface AuthContextType {
@@ -21,16 +21,14 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   updateUserProfile: (userData: Partial<User>) => Promise<void>;
-  refreshUser: () => Promise<void>; 
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Base URL and API key from environment variables (Vite)
 const API_URL = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_KEY;
 
-// Axios instance with default headers
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -63,7 +61,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (response.data.isLoggedIn) {
+        // Check if response contains user data
+        if (response.data.id) {
           const user: User = {
             id: response.data.id,
             username: response.data.username,
@@ -74,16 +73,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           setUser(user);
           setIsAuthenticated(true);
+          localStorage.setItem('user', JSON.stringify(user)); // Sync localStorage
         } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setIsAuthenticated(false);
+          throw new Error('Invalid user data');
         }
       } catch (err) {
         console.error('Auth check failed:', err);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -113,15 +112,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (userResponse.data.isLoggedIn) {
-        setUser({
+      if (userResponse.data.id) {
+        const user: User = {
           id: userResponse.data.id,
           username: userResponse.data.username,
           firstname: userResponse.data.firstname,
           lastname: userResponse.data.lastname || userResponse.data.firstname,
           email: userResponse.data.email,
           avatar: userResponse.data.avatar,
-        });
+        };
+        setUser(user);
         toast({
           title: 'Welcome back!',
           description: "You've successfully signed in.",
@@ -174,15 +174,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (userResponse.data.isLoggedIn) {
-        setUser({
+      if (userResponse.data.id) {
+        const user: User = {
           id: userResponse.data.id,
           username: userResponse.data.username,
           firstname: userResponse.data.firstname,
           lastname: userResponse.data.lastname || userResponse.data.firstname,
           email: userResponse.data.email,
           avatar: userResponse.data.avatar,
-        });
+        };
+        setUser(user);
         setIsAuthenticated(true);
         toast({
           title: 'Account created!',
@@ -215,17 +216,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description: "You've been successfully signed out.",
     });
   };
+
   const updateUserProfile = async (userData: Partial<User>) => {
     if (!user) return;
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
-      const response = await api.patch('/users/profile', userData, {
+      const response = await api.put('/users/current', userData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedUser = { ...user, ...response.data };
       setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
       toast({
         title: 'Profile updated',
         description: 'Your profile has been successfully updated.',
@@ -242,6 +245,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await api.get('/users/current', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.id) {
+        const user: User = {
+          id: response.data.id,
+          username: response.data.username,
+          firstname: response.data.firstname,
+          lastname: response.data.lastname || response.data.firstname,
+          email: response.data.email,
+          avatar: response.data.avatar,
+        };
+        setUser(user);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setIsAuthenticated(false);
+      setUser(null);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -251,8 +285,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated,
         updateUserProfile,
+        refreshUser,
       }}
     >
       {children}

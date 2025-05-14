@@ -118,7 +118,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = "si
   };
 
   const handleGoogleAuth = () => {
-    window.location.href = `${import.meta.env.VITE_IMAGE_URL}/auth/google`;
+    window.location.href = `${import.meta.env.VITE_IMAGE_URL}/api/auth/google`;
   };
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
