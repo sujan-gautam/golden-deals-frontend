@@ -35,7 +35,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'x-api-key': API_KEY,
   },
-  withCredentials: true,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
