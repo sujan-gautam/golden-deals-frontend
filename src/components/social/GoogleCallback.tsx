@@ -24,14 +24,14 @@ const GoogleCallback: React.FC = () => {
 
         setIsLoading(true);
         const result = await handleGoogleLogin(token);
-        
         console.log('Google login success:', result);
+
         toast({
           title: 'Success',
           description: 'Signed in with Google successfully!',
         });
 
-        console.log('Navigating to /onboarding'); // Debug navigation
+        console.log('Navigating to /onboarding');
         navigate('/onboarding', { replace: true });
       } catch (error: any) {
         console.error('Google login failed:', error);
@@ -40,7 +40,7 @@ const GoogleCallback: React.FC = () => {
           description: error.message || 'An error occurred during sign-in',
           variant: 'destructive',
         });
-        console.log('Navigating to /signin'); // Debug navigation
+        console.log('Navigating to /signin');
         navigate('/signin', { replace: true });
       } finally {
         setIsLoading(false);
@@ -50,6 +50,11 @@ const GoogleCallback: React.FC = () => {
     processGoogleLogin();
   }, [searchParams, navigate, toast]);
 
+  // Debug navigation state
+  useEffect(() => {
+    console.log('Current URL:', window.location.href);
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center h-screen">
       <p className="text-lg font-medium mb-4">
@@ -58,6 +63,13 @@ const GoogleCallback: React.FC = () => {
       {isLoading && (
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       )}
+      {/* Debug button to test navigation */}
+      <button
+        onClick={() => navigate('/onboarding', { replace: true })}
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        Debug: Go to Onboarding
+      </button>
     </div>
   );
 };
