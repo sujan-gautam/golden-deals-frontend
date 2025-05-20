@@ -1,8 +1,8 @@
 import { useAuth } from './use-auth';
 import { googleSignOut } from '../services/googleAuthService';
 import { useToast } from '../components/ui/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react'; // Add useEffect to handle post-login navigation
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 interface GoogleAuthType {
   googleLogin: () => void;
@@ -12,17 +12,18 @@ interface GoogleAuthType {
 export const useGoogleAuth = (): GoogleAuthType => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth(); // Assume useAuth provides user or isAuthenticated
+  const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
 
-  // Handle navigation after successful login
   useEffect(() => {
-    if (isAuthenticated || user) {
-      navigate('/onboarding');
+    console.log('useGoogleAuth: isAuthenticated=', isAuthenticated, 'user=', user, 'location=', location.pathname);
+    if ((isAuthenticated || user) && location.pathname !== '/onboarding') {
+      console.log('Navigating to /onboarding');
+      navigate('/onboarding', { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, location]);
 
   const googleLogin = () => {
-    // Redirect to Google OAuth, handled by GoogleAuthButton
     window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/google`;
   };
 
