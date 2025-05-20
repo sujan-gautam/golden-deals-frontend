@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { handleGoogleLogin } from '@/services/googleAuthService';
+import { useAuth } from './use-auth';
 
 const GoogleCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setUser } = useAuth();
   const hasProcessed = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,6 +27,10 @@ const GoogleCallback: React.FC = () => {
         setIsLoading(true);
         const result = await handleGoogleLogin(token);
         console.log('Google login success:', result);
+
+        // Update auth state and store token
+        setUser(result.user);
+        localStorage.setItem('token', result.accesstoken);
 
         toast({
           title: 'Success',
@@ -48,12 +54,7 @@ const GoogleCallback: React.FC = () => {
     };
 
     processGoogleLogin();
-  }, [searchParams, navigate, toast]);
-
-  // Debug navigation state
-  useEffect(() => {
-    console.log('Current URL:', window.location.href);
-  }, []);
+  }, [searchParams, navigate, toast, setUser]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">
@@ -63,7 +64,6 @@ const GoogleCallback: React.FC = () => {
       {isLoading && (
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       )}
-      {/* Debug button to test navigation */}
       <button
         onClick={() => navigate('/onboarding', { replace: true })}
         className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
