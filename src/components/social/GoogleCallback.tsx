@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { handleGoogleLogin } from '@/services/googleAuthService';
-import { useAuth } from './use-auth';
+import { useAuth } from '@/hooks/use-auth';
 
 const GoogleCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
