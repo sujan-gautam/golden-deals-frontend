@@ -147,63 +147,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (username: string, firstname: string, lastname: string, email: string, password: string) => {
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
 
-    try {
-      await api.post('/users/register', {
-        username,
-        firstname,
-        lastname,
-        email,
-        password,
-        confirm_password: password,
-      });
+  try {
+    console.log('Registering user:', { username, email, password });
+    await api.post('/users/register', {
+      username,
+      firstname,
+      lastname,
+      email,
+      password,
+      confirm_password: password,
+    });
 
-      const loginResponse = await api.post<{ accesstoken: string; user: User }>('/users/login', {
-        email,
-        password,
-      });
+    console.log('Registration successful, attempting login');
+    const loginResponse = await api.post<{ accesstoken: string; user: User }>('/users/login', {
+      email,
+      password,
+    });
 
-      const token = loginResponse.data.accesstoken;
-      if (!token) throw new Error('No access token received');
+    const token = loginResponse.data.accesstoken;
+    if (!token) throw new Error('No access token received');
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
 
-      const userResponse = await api.get('/users/current', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const userResponse = await api.get('/users/current', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      if (userResponse.data.id) {
-        const user: User = {
-          id: userResponse.data.id,
-          username: userResponse.data.username,
-          firstname: userResponse.data.firstname,
-          lastname: userResponse.data.lastname || userResponse.data.firstname,
-          email: userResponse.data.email,
-          avatar: userResponse.data.avatar,
-        };
-        setUser(user);
-        setIsAuthenticated(true);
-        toast({
-          title: 'Account created!',
-          description: "You've successfully signed up.",
-        });
-        navigate('/onboarding');
-      }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
-      setError(errorMessage);
+    if (userResponse.data.id) {
+      const user: User = {
+        id: userResponse.data.id,
+        username: userResponse.data.username,
+        firstname: userResponse.data.firstname,
+        lastname: userResponse.data.lastname || userResponse.data.firstname,
+        email: userResponse.data.email,
+        avatar: userResponse.data.avatar,
+      };
+      setUser(user);
+      setIsAuthenticated(true);
       toast({
-        title: 'Sign up failed',
-        description: errorMessage,
-        variant: 'destructive',
+        title: 'Account created!',
+        description: "You've successfully signed up.",
       });
-    } finally {
-      setLoading(false);
+      navigate('/onboarding');
     }
-  };
+  } catch (err: any) {
+    console.error('Registration error:', err.response?.data || err.message);
+    const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+    setError(errorMessage);
+    toast({
+      title: 'Sign up failed',
+      description: errorMessage,
+      variant: 'destructive',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const logout = () => {
     localStorage.removeItem('token');
