@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User } from '../types/user';
 
-const API_URL = import.meta.env.VITE_API_URL; // Should be 'http://localhost:5000/api'
+const API_URL = import.meta.env.VITE_API_URL; 
 const API_KEY = import.meta.env.VITE_API_KEY;
 
 const api = axios.create({
@@ -12,10 +12,12 @@ const api = axios.create({
   },
 });
 
-export const handleGoogleLogin = async (token: string): Promise<{ token: string; user: User }> => {
+export const handleGoogleLogin = async (
+  token: string
+): Promise<{ accesstoken: string; user: User }> => {
   try {
     console.log('Fetching user with token:', token);
-    console.log('API_URL:', API_URL); // Debug to confirm URL
+    console.log('API_URL:', API_URL);
 
     const response = await api.get('/users/current', {
       headers: { Authorization: `Bearer ${token}` },
@@ -35,13 +37,13 @@ export const handleGoogleLogin = async (token: string): Promise<{ token: string;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
 
-    return { token, user };
+    return { accesstoken: token, user };
   } catch (error: any) {
     console.error('Google login error:', {
       message: error.message,
       response: error.response?.data,
       status: error.response?.status,
-      config: error.config, // Log request config for debugging
+      config: error.config,
     });
     throw new Error(error.response?.data?.message || 'Google login failed');
   }
