@@ -8,7 +8,7 @@ const GoogleCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setUser, setIsAuthenticated } = useAuth();
+  const { refreshUser, isAuthenticated } = useAuth(); // Use refreshUser instead of setUser/setIsAuthenticated
   const hasProcessed = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,22 +33,8 @@ const GoogleCallback: React.FC = () => {
           throw new Error('Invalid response from Google login');
         }
 
-        const { token: authToken, user } = result;
-
-        // Use the user from handleGoogleLogin directly
-        const verifiedUser = {
-          id: user._id, // Adjust to match User type
-          username: user.username,
-          firstname: user.firstname,
-          lastname: user.lastname || user.firstname,
-          email: user.email,
-          avatar: user.avatar,
-        };
-
-        // Update AuthProvider state
-        setUser(verifiedUser);
-        setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(verifiedUser));
+        // Refresh user state using refreshUser
+        await refreshUser();
 
         toast({
           title: 'Success',
@@ -68,18 +54,15 @@ const GoogleCallback: React.FC = () => {
 
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        setIsAuthenticated(false);
-        setUser(null);
-
-        console.log('GoogleCallback: Navigating to /signin');
         navigate('/signin', { replace: true });
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (!setUser || !setIsAuthenticated || !toast) {
-      console.error('GoogleCallback: Missing required hooks', { setUser, setIsAuthenticated, toast });
+    console.log('GoogleCallback: useAuth values:', { refreshUser: typeof refreshUser, isAuthenticated });
+    if (!refreshUser || !toast) {
+      console.error('GoogleCallback: Missing required hooks', { refreshUser, toast });
       setError('Authentication system not initialized');
       setIsLoading(false);
       toast({
@@ -92,7 +75,7 @@ const GoogleCallback: React.FC = () => {
     }
 
     processGoogleLogin();
-  }, [searchParams, navigate, toast, setUser, setIsAuthenticated]);
+  }, [searchParams, navigate, toast, refreshUser, isAuthenticated]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
