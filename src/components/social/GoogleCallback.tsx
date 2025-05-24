@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { handleGoogleLogin } from '@/services/googleAuthService';
 import { useAuth } from '@/hooks/use-auth';
-import { api } from '@/services/api';
 
 const GoogleCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -21,7 +20,7 @@ const GoogleCallback: React.FC = () => {
 
       try {
         console.log('GoogleCallback: Processing with params:', searchParams.toString());
-        const token = searchParams.get('token'); // Keep this as `token`
+        const token = searchParams.get('token');
         if (!token) {
           throw new Error('No token received in callback');
         }
@@ -34,24 +33,16 @@ const GoogleCallback: React.FC = () => {
           throw new Error('Invalid response from Google login');
         }
 
-        const { token: authToken, user } = result; // Rename to `authToken` to avoid redeclaration
+        const { token: authToken, user } = result;
 
-        // Verify user with /users/current
-        const response = await api.get('/users/current', {
-          headers: { Authorization: `Bearer ${authToken}` },
-        });
-
-        if (!response.data.id) {
-          throw new Error('Failed to verify user');
-        }
-
+        // Use the user from handleGoogleLogin directly
         const verifiedUser = {
-          id: response.data.id,
-          username: response.data.username,
-          firstname: response.data.firstname,
-          lastname: response.data.lastname || response.data.firstname,
-          email: response.data.email,
-          avatar: response.data.avatar,
+          id: user._id, // Adjust to match User type
+          username: user.username,
+          firstname: user.firstname,
+          lastname: user.lastname || user.firstname,
+          email: user.email,
+          avatar: user.avatar,
         };
 
         // Update AuthProvider state
