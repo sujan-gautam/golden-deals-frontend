@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { handleGoogleLogin } from '@/services/googleAuthService';
 import { useAuth } from '@/hooks/use-auth';
-import { api } from '@/services/api'; 
+import { api } from '@/services/api';
 
 const GoogleCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -30,19 +30,15 @@ const GoogleCallback: React.FC = () => {
         const result = await handleGoogleLogin(token);
         console.log('GoogleCallback: Login success:', result);
 
-        if (!result?.accesstoken || !result?.user) {
+        if (!result?.token || !result?.user) {
           throw new Error('Invalid response from Google login');
         }
 
-        const { accesstoken, user } = result;
-
-        // Store token and user in localStorage
-        localStorage.setItem('token', accesstoken);
-        localStorage.setItem('user', JSON.stringify(user));
+        const { token, user } = result;
 
         // Verify user with /users/current
         const response = await api.get('/users/current', {
-          headers: { Authorization: `Bearer ${accesstoken}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!response.data.id) {
@@ -72,14 +68,13 @@ const GoogleCallback: React.FC = () => {
         navigate('/onboarding', { replace: true });
       } catch (error: any) {
         console.error('GoogleCallback: Login failed:', error);
-        setError(error.message || 'An error occurred during sign-in');
+        setError(error.message || 'An error occurred during during sign-in');
         toast({
           title: 'Google Sign-In Failed',
           description: error.message || 'An error occurred during sign-in',
           variant: 'destructive',
         });
 
-        // Clear stale auth data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setIsAuthenticated(false);
@@ -92,9 +87,7 @@ const GoogleCallback: React.FC = () => {
       }
     };
 
-    if (setUser && setIsAuthenticated && toast) {
-      processGoogleLogin();
-    } else {
+    if (!setUser || !setIsAuthenticated || !toast) {
       console.error('GoogleCallback: Missing required hooks', { setUser, setIsAuthenticated, toast });
       setError('Authentication system not initialized');
       setIsLoading(false);
@@ -104,7 +97,10 @@ const GoogleCallback: React.FC = () => {
         variant: 'destructive',
       });
       navigate('/signin', { replace: true });
+      return;
     }
+
+    processGoogleLogin();
   }, [searchParams, navigate, toast, setUser, setIsAuthenticated]);
 
   return (
