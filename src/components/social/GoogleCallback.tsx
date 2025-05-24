@@ -21,7 +21,7 @@ const GoogleCallback: React.FC = () => {
 
       try {
         console.log('GoogleCallback: Processing with params:', searchParams.toString());
-        const token = searchParams.get('token');
+        const token = searchParams.get('token'); // Keep this as `token`
         if (!token) {
           throw new Error('No token received in callback');
         }
@@ -34,11 +34,11 @@ const GoogleCallback: React.FC = () => {
           throw new Error('Invalid response from Google login');
         }
 
-        const { token, user } = result;
+        const { token: authToken, user } = result; // Rename destructured `token` to `authToken`
 
         // Verify user with /users/current
         const response = await api.get('/users/current', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${authToken}` },
         });
 
         if (!response.data.id) {
@@ -68,7 +68,7 @@ const GoogleCallback: React.FC = () => {
         navigate('/onboarding', { replace: true });
       } catch (error: any) {
         console.error('GoogleCallback: Login failed:', error);
-        setError(error.message || 'An error occurred during during sign-in');
+        setError(error.message || 'An error occurred during sign-in');
         toast({
           title: 'Google Sign-In Failed',
           description: error.message || 'An error occurred during sign-in',
