@@ -34,7 +34,7 @@ const GoogleCallback: React.FC = () => {
           throw new Error('Invalid response from Google login');
         }
 
-        const { token: authToken, user } = result; // Rename destructured `token` to `authToken`
+        const { token: authToken, user } = result; // Rename to `authToken` to avoid redeclaration
 
         // Verify user with /users/current
         const response = await api.get('/users/current', {
